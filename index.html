@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.6";
+const VER="1.0.7";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -269,7 +269,8 @@ function render(){
   focusScan()}
 
 // ---------- folhas (menus) ----------
-function showSheet(html,wireFn){closeSheet();const o=document.createElement("div");o.className="ovl";o.innerHTML=`<div class="sheet">${html}</div>`;document.body.appendChild(o);
+function showSheet(html,wireFn){closeSheet();{const i=$("#scan");if(i)i.blur()} // janela aberta: esconde o teclado
+  const o=document.createElement("div");o.className="ovl";o.innerHTML=`<div class="sheet">${html}</div>`;document.body.appendChild(o);
   o.addEventListener("click",e=>{if(e.target===o||e.target.closest("[data-x]"))closeSheet()});if(wireFn)wireFn(o)}
 function closeSheet(){const o=$(".ovl");if(o)o.remove();setTimeout(focusScan,50)}
 $("#bMenu").onclick=()=>showSheet(`<h3>Menu</h3>
