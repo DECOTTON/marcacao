@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.10";
+const VER="1.0.11";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -123,10 +123,11 @@ const vib=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
 const sOk=()=>{beep(1250,70);vib(40)},sWarn=()=>{beep(600,120,2);vib([60,60,60])},sBad=()=>{beep(260,260,3);vib([300,120,300])};
 
 // ======================================================================
-// ETIQUETA 100 × 75 mm (203 dpi = 8 pontos/mm → 800 × 600 pontos)
+// ETIQUETA 105 × 75 mm (203 dpi = 8 pontos/mm → 832 × 600 pontos impressos)
 // desenhada num canvas e enviada à impressora como imagem 1 bit
 // ======================================================================
-const LW=800,LH=600;
+// 105 mm de largura; a LK-P400 imprime no máximo 104 mm (832 pontos): a imagem usa os 832 pontos
+const LW=832,LH=600;
 // Code 128 (conjunto C, só dígitos em pares)
 const C128=["212222","222122","222221","121223","121322","131222","122213","122312","132212","221213","221312","231212","112232","122132","122231","113222","123122","123221","223211","221132","221231","213212","223112","312131","311222","321122","321221","312212","322112","322211","212123","212321","232121","111323","131123","131321","112313","132113","132311","211313","231113","231311","112133","112331","132131","113123","113321","133121","313121","211331","231131","213113","213311","213131","311123","311321","331121","312113","312311","332111","314111","221411","431111","111224","111422","121124","121421","141122","141221","112214","112412","122114","122411","142112","142211","241211","221114","413111","241112","134111","111242","121142","121241","114212","124112","124211","411212","421112","421211","212141","214121","412121","111143","111341","131141","114113","114311","411113","411311","113141","114131","311141","411131","211412","211214","211232","2331112"];
 function c128C(digits){const d=String(digits);if(!/^\d+$/.test(d)||d.length%2)return null;const v=[105];for(let i=0;i<d.length;i+=2)v.push(+d.slice(i,i+2));let s=v[0];for(let i=1;i<v.length;i++)s+=v[i]*i;v.push(s%103);v.push(106);
@@ -201,10 +202,10 @@ const PRN={port:null,writer:null,
   async enviar(bytes){await this.abrir();const w=this.port.writable.getWriter();try{for(let i=0;i<bytes.length;i+=1024){await w.write(bytes.subarray(i,i+1024))}}finally{w.releaseLock()}},
   async fechar(){try{if(this.port&&this.port.readable)await this.port.close()}catch(e){}try{if(this.port&&this.port.writable)await this.port.close()}catch(e){}},
   nome(){const p=this.port;if(!p)return"";try{const i=p.getInfo();return i.bluetoothServiceClassId?"Bluetooth":"Serial"}catch(e){return""}}};
-// impressora do sistema (rede/Wi-Fi, PDF) — TESTE: folha A4 com a etiqueta em tamanho real (100 × 75 mm),
+// impressora do sistema (rede/Wi-Fi, PDF) — TESTE: folha A4 com a etiqueta em tamanho real (105 × 75 mm),
 // borda no contorno da etiqueta e cotas com as medidas, para conferir com régua
 function printSistema(cv,copias){return new Promise(ok=>{const url=cv.toDataURL("image/png"),n=Math.max(1,Math.min(9,+copias||1));
-  const X=30,Y=35,W=100,H=75; // posição da etiqueta na folha (mm)
+  const X=28,Y=35,W=105,H=75; // posição da etiqueta na folha (mm)
   const cota=`<svg class="ct" viewBox="0 0 210 297" width="210mm" height="297mm" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif">
     <rect x="${X}" y="${Y}" width="${W}" height="${H}" fill="none" stroke="#000" stroke-width=".35"/>
     <g stroke="#000" stroke-width=".25" fill="none"><line x1="${X}" y1="${Y-2}" x2="${X}" y2="${Y-11}"/><line x1="${X+W}" y1="${Y-2}" x2="${X+W}" y2="${Y-11}"/>
@@ -212,12 +213,12 @@ function printSistema(cv,copias){return new Promise(ok=>{const url=cv.toDataURL(
       <line x1="${X+W+2}" y1="${Y}" x2="${X+W+11}" y2="${Y}"/><line x1="${X+W+2}" y1="${Y+H}" x2="${X+W+11}" y2="${Y+H}"/>
       <line x1="${X+W+8}" y1="${Y}" x2="${X+W+8}" y2="${Y+H}"/></g>
     <g fill="#000"><path d="M${X},${Y-8} l3,-1.2 v2.4 z"/><path d="M${X+W},${Y-8} l-3,-1.2 v2.4 z"/><path d="M${X+W+8},${Y} l-1.2,3 h2.4 z"/><path d="M${X+W+8},${Y+H} l-1.2,-3 h2.4 z"/></g>
-    <text x="${X+W/2}" y="${Y-10}" font-size="4" text-anchor="middle">100 mm</text>
+    <text x="${X+W/2}" y="${Y-10}" font-size="4" text-anchor="middle">105 mm</text>
     <text x="${X+W+10}" y="${Y+H/2}" font-size="4" text-anchor="middle" transform="rotate(90 ${X+W+10} ${Y+H/2})" dy="-1.2">75 mm</text>
-    <text x="${X}" y="${Y+H+9}" font-size="3.4">Teste de layout · etiqueta em tamanho real (100 × 75 mm) · imprima em escala 100% / "Tamanho real".</text>
-    <text x="${X}" y="${Y+H+14}" font-size="3.4">Confira as medidas com uma régua: se a borda não medir 100 × 75 mm, a impressora ampliou ou reduziu a página.</text>
+    <text x="${X}" y="${Y+H+9}" font-size="3.4">Teste de layout · etiqueta em tamanho real (105 × 75 mm) · imprima em escala 100% / "Tamanho real".</text>
+    <text x="${X}" y="${Y+H+14}" font-size="3.4">Confira as medidas com uma régua: se a borda não medir 105 × 75 mm, a impressora ampliou ou reduziu a página.</text>
     <text x="${X}" y="${Y+H+19}" font-size="3.4">Na Sewoo LK-P400 sai só a etiqueta, sem borda e sem cotas.</text></svg>`;
-  const pg=`<div class="pg">${cota}<img src="${url}" style="left:${X}mm;top:${Y}mm;width:${W}mm;height:${H}mm"></div>`;
+  const pg=`<div class="pg">${cota}<img src="${url}" style="left:${X+.5}mm;top:${Y}mm;width:104mm;height:${H}mm"></div>`;
   const f=document.createElement("iframe");f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";document.body.appendChild(f);
   const d=f.contentDocument;d.open();d.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4 portrait;margin:0}html,body{margin:0;padding:0}
     .pg{position:relative;width:210mm;height:297mm;overflow:hidden;page-break-after:always}.pg:last-child{page-break-after:auto}.pg svg.ct{position:absolute;left:0;top:0;z-index:2}.pg img{position:absolute;display:block;image-rendering:pixelated}</style></head><body>${Array.from({length:n},()=>pg).join("")}</body></html>`);d.close();
@@ -275,7 +276,7 @@ function render(){
      <div class="sai"><span class="lab">CÓDIGO DE BARRAS SAI</span>${f.code?esc(f.code):"<span class='muted'>— (nº digitado; leia a etiqueta para ter o código)</span>"}</div>
      ${f.dsai?`<p class="hint" style="color:var(--bad);font-weight:700">Atenção: fardo já expedido em ${esc(f.dsai)}.</p>`:""}
      <button class="btn prt big" type="button" id="bPrint" style="margin-top:12px"${!f.lote||ui.busy?" disabled":""}>${ui.busy?"Imprimindo…":"🖨 IMPRIMIR"}</button>
-     ${f.lote?`<canvas class="prev" id="cvPrev"></canvas><p class="hint">Prévia da etiqueta 100 × 75 mm.</p>`:""}</div>`
+     ${f.lote?`<canvas class="prev" id="cvPrev"></canvas><p class="hint">Prévia da etiqueta 105 × 75 mm.</p>`:""}</div>`
    :`<div class="card"><div class="msg idle">Leia a etiqueta SAI do fardo…</div><p class="hint">Use o gatilho do coletor, a câmera 📷 ou digite o nº do fardo e toque em OK.</p></div>`}
    <div class="card"><h2>Últimas impressões (${fmt(S.hist.length)})</h2><ul class="lst">${S.hist.slice(0,8).map(h=>`<li><b>Lote ${esc(h.lote)}</b><span>P${h.p} · ${g3(h.n)}</span><span class="r muted">${new Date(h.t).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</span></li>`).join("")||`<li class="muted">Nenhuma etiqueta impressa ainda.</li>`}</ul></div>`;
   const bp=$("#bPrint");if(bp)bp.onclick=()=>imprimir(ui.fd);
@@ -298,7 +299,7 @@ $("#bMenu").onclick=()=>showSheet(`<h3>Menu</h3>
   $("#mDisp").onclick=()=>{const v=prompt("Nome deste aparelho (ex.: Coletor marcação 1):",S.disp||"");if(v!=null){S.disp=v.trim();saveState();closeSheet();render()}};
   $("#mHist").onclick=()=>{if(confirm("Apagar o histórico de etiquetas impressas deste aparelho?")){S.hist=[];saveState();closeSheet();render()}}});
 function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
-  <p class="hint" style="margin-top:0">Sewoo LK-P400 · etiqueta 100 × 75 mm. Antes, pareie a impressora no Bluetooth do coletor (Configurações do Android › Bluetooth).</p>
+  <p class="hint" style="margin-top:0">Sewoo LK-P400 · etiqueta 105 × 75 mm. Antes, pareie a impressora no Bluetooth do coletor (Configurações do Android › Bluetooth).</p>
   <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT</option><option value="sistema"${c.modo==="sistema"?" selected":""}>Impressora do sistema (Wi-Fi/rede · teste)</option></select></label>
    <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option></select></label>
    <label><span>Deslocar → (pontos)</span><input type="number" id="pDx" value="${+c.dx||0}" step="8"></label><label><span>Deslocar ↓ (pontos)</span><input type="number" id="pDy" value="${+c.dy||0}" step="8"></label>

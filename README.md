@@ -1,6 +1,6 @@
 # Marcação
 
-App offline (PWA) para o coletor da equipe de separação: lê a etiqueta SAI do fardo, mostra lote, nº do fardo, prensa e produtor (do pacote gerado no app principal) e imprime a etiqueta de marcação 100 × 75 mm na Sewoo LK-P400 por Bluetooth.
+App offline (PWA) para o coletor da equipe de separação: lê a etiqueta SAI do fardo, mostra lote, nº do fardo, prensa e produtor (do pacote gerado no app principal) e imprime a etiqueta de marcação 105 × 75 mm na Sewoo LK-P400 por Bluetooth.
 
 Link: https://decotton.github.io/marcacao/
 
