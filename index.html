@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.20";
+const VER="1.0.21";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -195,7 +195,7 @@ function job(B,copias){const L=S.cfg.lang,dx=Math.round(+S.cfg.dx||0),dy=Math.ro
 // ZPL com comandos nativos da impressora (texto, código de barras, QR, caixas): poucos dados e
 // não depende de gráfico. Só os logos vão como imagem pequena (^GFA).
 async function zplNativo(fd,copias){const q=Math.max(1,Math.min(9,+copias||1)),dx=Math.max(0,Math.round(+S.cfg.dx||0)),dy=Math.max(0,Math.round(+S.cfg.dy||0)),M=14;
-  const zt=t=>String(t??"").replace(/[\^~]/g," ");const P=[`^XA^CI28^PW${LW}^LL${LH}^LH${dx},${dy}^PON\n`];
+  const zt=t=>String(t??"").replace(/[\^~]/g," ");const P=[`^XA^MNY^MTD^CI28^PW${LW}^LL${LH}^LH${dx},${dy}^PON\n`];
   // logos (imagem pequena)
   if(S.cfg.logos&&LOGOS.length){const ims=(await Promise.all(LOGOS.map(loadImg))).filter(Boolean);const cv=document.createElement("canvas");cv.width=LW;cv.height=74;const ctx=cv.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,LW,74);
     if(ims[0])drawLogo(ctx,ims[0],M,M,230,60,false);if(ims[1])drawLogo(ctx,ims[1],LW-M-230,M,230,60,true);const B=toBits(cv);
@@ -336,7 +336,7 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
    <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label></div>
   <label class="opt"><input type="checkbox" id="pAuto"${c.auto?" checked":""}> Imprimir sozinho logo após ler o fardo</label>
   <label class="opt"><input type="checkbox" id="pLogo"${c.logos?" checked":""}> Logos na etiqueta ${LOGOS.length?"":"<small class='muted'>(o pacote atual não tem logos)</small>"}</label>
-  <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="pPick">Escolher impressora</button><button class="btn" type="button" id="pTest">Imprimir teste</button></div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="pLing">🔎 Descobrir linguagem</button><button class="btn" type="button" id="pZdg">🧪 Diagnóstico ZPL</button></div>
+  <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="pPick">Escolher impressora</button><button class="btn" type="button" id="pTest">Imprimir teste</button></div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="pLing">🔎 Descobrir linguagem</button><button class="btn" type="button" id="pZdg">🧪 Diagnóstico ZPL</button><button class="btn" type="button" id="pCal">📏 Calibrar etiqueta</button></div>
   <p class="hint" id="pInfo">${PRN.ok()?"":"⚠ Este navegador não acessa impressora Bluetooth direto: atualize o Chrome (138 ou mais novo) ou use o app RawBT."}</p>
   <p class="hint">1 mm = 8 pontos. Se a etiqueta sair deslocada, ajuste e imprima o teste de novo. Se sair só texto estranho ou nada, troque a <b>Linguagem</b>.</p>
   <button class="btn big" type="button" data-x style="margin-top:10px">Fechar</button>`,o=>{
@@ -345,9 +345,13 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   $("#pPick").onclick=async()=>{sv();if(c.modo==="rawbt"){toast("No modo RawBT a impressora é escolhida dentro do app RawBT.");return}if(c.modo==="sistema"){toast("Neste modo a impressora é escolhida na janela de impressão do Android, ao imprimir.");return}
     try{await PRN.escolher();await PRN.abrir();$("#pInfo").textContent="✓ Impressora conectada.";prnStatus();sOk()}catch(e){if(e&&e.name==="NotFoundError")return;$("#pInfo").textContent="⚠ "+((e&&e.message)||"Não foi possível conectar.");sBad()}};
   $("#pTest").onclick=async()=>{sv();closeSheet();await testePrint()};
+  // calibração do sensor de etiqueta (gap) e modo térmico direto, gravado na impressora
+  $("#pCal").onclick=async()=>{sv();if(c.modo==="sistema"){toast("Use a conexão Bluetooth direto ou RawBT.");return}
+    try{await enviarBruto(enc("^XA^MNY^MTD^LL600^PW832^JUS^XZ\n~JC\n"));$("#pInfo").innerHTML="Calibração enviada: a impressora deve puxar algumas etiquetas e parar no início de uma. Depois toque em <b>Imprimir teste</b>.";sOk()}
+    catch(e){$("#pInfo").textContent="⚠ "+((e&&e.message)||"Falha ao enviar.");sBad()}};
   // diagnóstico ZPL: 4 etiquetas pequenas, cada uma testa um recurso (o nº que sair mostra o que a impressora aceita)
   $("#pZdg").onclick=async()=>{sv();if(c.modo==="sistema"){toast("Use a conexão Bluetooth direto ou RawBT para este teste.");return}
-    const sq="FF".repeat(6*48);const jobs=["^XA^FO20,30^A0N,60,60^FDTESTE 1 texto^FS^XZ\n",
+    const sq="FF".repeat(6*48);const jobs=["^XA^MTD^FO20,30^A0N,60,60^FDTESTE 1 texto^FS^XZ\n",
       "^XA^CI28^PW832^LL600^LH0,0^PON^FO20,30^A0N,60,60^FDTESTE 2 config^FS^PQ1^XZ\n",
       "^XA^FO20,30^A0N,60,60^FDTESTE 3 codigos^FS^FO20,110^BY3,3,66^BCN,66,N,N,N^FD>;00078985333027290477^FS^FO560,100^BQN,2,6^FDMA,00078985333027290477^FS^FO20,220^GB300,60,60^FS^FO34,228^A0N,48,44^FR^FD729 047^FS^XZ\n",
       `^XA^FO20,30^A0N,60,60^FDTESTE 4 imagem^FS^FO20,120^GFA,${6*48},${6*48},6,${sq}^FS^XZ\n`];
