@@ -35,7 +35,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 .muted{color:var(--mut)}
 .sbar{flex:1 1 100%;display:flex;gap:6px;margin-top:4px}.sbar .scan{flex:1;min-width:0;padding:10px 12px;font-size:19px;border:2px solid var(--acc2)}
 .sb{border:0;border-radius:10px;padding:0 12px;font-weight:800;font-size:16px;background:#fff;color:var(--ink)}.sb.pri{background:var(--acc2);color:#fff}
-.fd .flote{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.fd .flote{display:flex;flex-direction:column;gap:6px}.fd .flote>div:last-child{align-self:flex-end;text-align:right}
 .lab{display:block;font-size:12px;font-weight:800;color:var(--mut);letter-spacing:.04em}
 .lote{font:900 64px/1 system-ui,sans-serif;color:var(--ink)}
 .fardo{display:inline-block;font:900 44px/1.05 ui-monospace,Menlo,monospace;background:var(--ink);color:#fff;border-radius:8px;padding:4px 14px;letter-spacing:.04em}
@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.14";
+const VER="1.0.15";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
