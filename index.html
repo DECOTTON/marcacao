@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.19";
+const VER="1.0.20";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -252,6 +252,7 @@ function printSistema(cv,copias){return new Promise(ok=>{const url=cv.toDataURL(
   const d=f.contentDocument;d.open();d.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4 portrait;margin:0}html,body{margin:0;padding:0}
     .pg{position:relative;width:210mm;height:297mm;overflow:hidden;page-break-after:always}.pg:last-child{page-break-after:auto}.pg svg.ct{position:absolute;left:0;top:0;z-index:2}.pg img{position:absolute;display:block;image-rendering:pixelated}</style></head><body>${Array.from({length:n},()=>pg).join("")}</body></html>`);d.close();
   let foi=false;const go=()=>{if(foi)return;foi=true;ok();setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){}setTimeout(()=>f.remove(),60000)},50)};const im=d.images[0];if(im&&!im.complete){im.onload=go;im.onerror=go;setTimeout(go,2000)}else setTimeout(go,100)})}
+async function enviarBruto(bytes){if(S.cfg.modo==="rawbt"){let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));location.href="rawbt:base64,"+btoa(s);return}await PRN.enviar(bytes)}
 async function prnStatus(){const e=$("#pSt");if(!e)return;if(S.cfg.modo==="sistema"){e.textContent="🖨 Sistema";e.className="pst on";return}if(S.cfg.modo==="rawbt"){e.textContent="🖨 RawBT";e.className="pst on";return}
   const p=PRN.port||await PRN.lembrada();e.textContent=p?"🖨 Pronta":"🖨 Sem impressora";e.className="pst"+(p?" on":"")}
 async function imprimir(fd,copias){if(ui.busy)return;if(!fd||!fd.lote){toast("Fardo sem lote: não imprime.");sBad();return}
@@ -345,18 +346,18 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
     try{await PRN.escolher();await PRN.abrir();$("#pInfo").textContent="✓ Impressora conectada.";prnStatus();sOk()}catch(e){if(e&&e.name==="NotFoundError")return;$("#pInfo").textContent="⚠ "+((e&&e.message)||"Não foi possível conectar.");sBad()}};
   $("#pTest").onclick=async()=>{sv();closeSheet();await testePrint()};
   // diagnóstico ZPL: 4 etiquetas pequenas, cada uma testa um recurso (o nº que sair mostra o que a impressora aceita)
-  $("#pZdg").onclick=async()=>{sv();if(c.modo!=="serial"){toast("Use a conexão Bluetooth direto (Chrome) para este teste.");return}
+  $("#pZdg").onclick=async()=>{sv();if(c.modo==="sistema"){toast("Use a conexão Bluetooth direto ou RawBT para este teste.");return}
     const sq="FF".repeat(6*48);const jobs=["^XA^FO20,30^A0N,60,60^FDTESTE 1 texto^FS^XZ\n",
       "^XA^CI28^PW832^LL600^LH0,0^PON^FO20,30^A0N,60,60^FDTESTE 2 config^FS^PQ1^XZ\n",
       "^XA^FO20,30^A0N,60,60^FDTESTE 3 codigos^FS^FO20,110^BY3,3,66^BCN,66,N,N,N^FD>;00078985333027290477^FS^FO560,100^BQN,2,6^FDMA,00078985333027290477^FS^FO20,220^GB300,60,60^FS^FO34,228^A0N,48,44^FR^FD729 047^FS^XZ\n",
       `^XA^FO20,30^A0N,60,60^FDTESTE 4 imagem^FS^FO20,120^GFA,${6*48},${6*48},6,${sq}^FS^XZ\n`];
-    try{for(const j of jobs){await PRN.enviar(enc(j));await new Promise(ok=>setTimeout(ok,600))}
+    try{if(c.modo==="rawbt")await enviarBruto(enc(jobs.join("")));else for(const j of jobs){await PRN.enviar(enc(j));await new Promise(ok=>setTimeout(ok,600))}
       $("#pInfo").innerHTML="Enviadas 4 etiquetas de teste. Me diga quais números saíram: <b>1</b> texto · <b>2</b> configuração · <b>3</b> código de barras, QR e caixa · <b>4</b> imagem.";sOk()}
     catch(e){$("#pInfo").textContent="⚠ "+((e&&e.message)||"Falha ao enviar.");sBad()}};
   // envia um texto curto em cada linguagem: a impressora imprime legível só a linha da linguagem que ela entende
-  $("#pLing").onclick=async()=>{sv();if(c.modo!=="serial"){toast("Use a conexão Bluetooth direto (Chrome) para este teste.");return}
+  $("#pLing").onclick=async()=>{sv();if(c.modo==="sistema"){toast("Use a conexão Bluetooth direto ou RawBT para este teste.");return}
     const cmd=cat([new Uint8Array([0x1B,0x40]),enc("\n ESC/POS OK\n\n\n"),enc("! 0 200 200 160 1\r\nTEXT 4 0 20 30 CPCL OK\r\nFORM\r\nPRINT\r\n"),enc("^XA^FO20,30^A0N,60,60^FDZPL OK^FS^XZ\n")]);
-    try{await PRN.enviar(cmd);$("#pInfo").innerHTML="Enviado. Veja qual texto saiu legível na etiqueta: <b>ESC/POS OK</b>, <b>CPCL OK</b> ou <b>ZPL OK</b> — escolha essa linguagem acima.";sOk()}catch(e){$("#pInfo").textContent="⚠ "+((e&&e.message)||"Falha ao enviar.");sBad()}}})}
+    try{await enviarBruto(cmd);$("#pInfo").innerHTML="Enviado. Veja qual texto saiu legível na etiqueta: <b>ESC/POS OK</b>, <b>CPCL OK</b> ou <b>ZPL OK</b> — escolha essa linguagem acima.";sOk()}catch(e){$("#pInfo").textContent="⚠ "+((e&&e.message)||"Falha ao enviar.");sBad()}}})}
 
 // ---------- pacote ----------
 $("#fPac").onchange=async e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;
