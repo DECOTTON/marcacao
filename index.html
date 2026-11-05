@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.23";
+const VER="1.0.24";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -256,14 +256,30 @@ function printSistema(cv,copias){return new Promise(ok=>{const url=cv.toDataURL(
   const d=f.contentDocument;d.open();d.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4 portrait;margin:0}html,body{margin:0;padding:0}
     .pg{position:relative;width:210mm;height:297mm;overflow:hidden;page-break-after:always}.pg:last-child{page-break-after:auto}.pg svg.ct{position:absolute;left:0;top:0;z-index:2}.pg img{position:absolute;display:block;image-rendering:pixelated}</style></head><body>${Array.from({length:n},()=>pg).join("")}</body></html>`);d.close();
   let foi=false;const go=()=>{if(foi)return;foi=true;ok();setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){}setTimeout(()=>f.remove(),60000)},50)};const im=d.images[0];if(im&&!im.complete){im.onload=go;im.onerror=go;setTimeout(go,2000)}else setTimeout(go,100)})}
-async function enviarBruto(bytes){if(S.cfg.modo==="rawbt"){let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));location.href="rawbt:base64,"+btoa(s);return}await PRN.enviar(bytes)}
-async function prnStatus(){const e=$("#pSt");if(!e)return;if(S.cfg.modo==="sistema"){e.textContent="🖨 Sistema";e.className="pst on";return}if(S.cfg.modo==="rawbt"){e.textContent="🖨 RawBT";e.className="pst on";return}
+// Bluetooth BLE (Web Bluetooth): procura na impressora uma característica de escrita (serviços de "porta serial" comuns)
+const BLE_SVCS=["000018f0-0000-1000-8000-00805f9b34fb","49535343-fe7d-4ae5-8fa9-9fafd205e455","6e400001-b5a3-f393-e0a9-e50e24dcca9e","0000ff00-0000-1000-8000-00805f9b34fb","0000ffe0-0000-1000-8000-00805f9b34fb","0000fee7-0000-1000-8000-00805f9b34fb","e7810a71-73ae-499d-8c15-faa9aef0c3f2","000018f1-0000-1000-8000-00805f9b34fb","0000ae30-0000-1000-8000-00805f9b34fb"];
+const BLE={dev:null,ch:null,
+  ok(){return !!(navigator.bluetooth&&navigator.bluetooth.requestDevice)},
+  async escolher(){if(!this.ok())throw new Error("Este navegador não tem Bluetooth BLE.");
+    this.dev=await navigator.bluetooth.requestDevice({filters:[{namePrefix:"KK_P400"},{namePrefix:"LK-P400"},{namePrefix:"LK_P400"},{namePrefix:"SEWOO"},{namePrefix:"Sewoo"},{namePrefix:"KK"}],optionalServices:BLE_SVCS});
+    this.ch=null;this.dev.addEventListener("gattserverdisconnected",()=>{this.ch=null;prnStatus()});return this.dev},
+  async abrir(){if(!this.dev){try{const ds=navigator.bluetooth.getDevices?await navigator.bluetooth.getDevices():[];this.dev=ds[0]||null}catch(e){}}
+    if(!this.dev)throw new Error("Nenhuma impressora BLE escolhida. Toque em 🖨 Impressora › Escolher impressora.");
+    if(this.ch&&this.dev.gatt.connected)return this.ch;
+    const g=await this.dev.gatt.connect();let best=null;
+    for(const sv of await g.getPrimaryServices()){let cs=[];try{cs=await sv.getCharacteristics()}catch(e){}for(const c of cs){if(c.properties.writeWithoutResponse||c.properties.write){best=best||c;if(BLE_SVCS.includes(sv.uuid))best=c}}if(best&&BLE_SVCS.includes(sv.uuid))break}
+    if(!best)throw new Error("A impressora conectou por BLE, mas não tem canal de escrita conhecido.");this.ch=best;await new Promise(ok=>setTimeout(ok,600));return best},
+  async enviar(bytes){const c=await this.abrir(),ck=Math.max(20,+S.cfg.bleBloco||180);
+    for(let i=0;i<bytes.length;i+=ck){const part=bytes.slice(i,i+ck);if(c.properties.writeWithoutResponse&&c.writeValueWithoutResponse)await c.writeValueWithoutResponse(part);else await c.writeValue(part);await new Promise(ok=>setTimeout(ok,8))}}};
+async function enviarBruto(bytes){if(S.cfg.modo==="ble")return BLE.enviar(bytes);if(S.cfg.modo==="rawbt"){let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));location.href="rawbt:base64,"+btoa(s);return}await PRN.enviar(bytes)}
+async function prnStatus(){const e=$("#pSt");if(!e)return;if(S.cfg.modo==="ble"){const ok=BLE.dev&&BLE.dev.gatt&&BLE.dev.gatt.connected;e.textContent=ok?"🖨 BLE pronta":"🖨 BLE";e.className="pst"+(ok?" on":"");return}if(S.cfg.modo==="sistema"){e.textContent="🖨 Sistema";e.className="pst on";return}if(S.cfg.modo==="rawbt"){e.textContent="🖨 RawBT";e.className="pst on";return}
   const p=PRN.port||await PRN.lembrada();e.textContent=p?"🖨 Pronta":"🖨 Sem impressora";e.className="pst"+(p?" on":"")}
 async function imprimir(fd,copias){if(ui.busy)return;if(!fd||!fd.lote){toast("Fardo sem lote: não imprime.");sBad();return}
   ui.busy=true;render();const solta=setTimeout(()=>{if(ui.busy){ui.busy=false;render()}},8000);
   try{const cv=await drawLabel(document.createElement("canvas"),fd),B=toBits(cv),bytes=S.cfg.lang==="zpl"?await zplNativo(fd,copias||S.cfg.copias):job(B,copias||S.cfg.copias);
     if(S.cfg.modo==="sistema")await printSistema(cv,copias||S.cfg.copias);
     else if(S.cfg.modo==="rawbt"){let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));location.href="rawbt:base64,"+btoa(s)}
+    else if(S.cfg.modo==="ble")await BLE.enviar(bytes);
     else await PRN.enviar(bytes);
     if(!fd.teste){S.hist.unshift({p:fd.p,n:fd.n,lote:fd.lote,t:Date.now()});S.hist=S.hist.slice(0,300);saveState()}
     ui.msg={c:"ok",t:`✓ Etiqueta enviada · lote ${fd.lote} · fardo ${g3(fd.n)}`};sOk()}
@@ -334,7 +350,7 @@ $("#bMenu").onclick=()=>showSheet(`<h3>Menu</h3>
   $("#mHist").onclick=()=>{if(confirm("Apagar o histórico de etiquetas impressas deste aparelho?")){S.hist=[];saveState();closeSheet();render()}}});
 function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   <p class="hint" style="margin-top:0">Sewoo LK-P400 · etiqueta 105 × 75 mm. Antes, pareie a impressora no Bluetooth do coletor (Configurações do Android › Bluetooth).</p>
-  <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT</option><option value="sistema"${c.modo==="sistema"?" selected":""}>Impressora do sistema (Wi-Fi/rede · teste)</option></select></label>
+  <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="ble"${c.modo==="ble"?" selected":""}>Bluetooth BLE (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT</option><option value="sistema"${c.modo==="sistema"?" selected":""}>Impressora do sistema (Wi-Fi/rede · teste)</option></select></label>
    <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="zplimg"${c.lang==="zplimg"?" selected":""}>ZPL (imagem)</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option><option value="cpcleg"${c.lang==="cpcleg"?" selected":""}>CPCL (gráfico hex · EG)</option></select></label>
    <label><span>Deslocar → (pontos)</span><input type="number" id="pDx" value="${+c.dx||0}" step="8"></label><label><span>Deslocar ↓ (pontos)</span><input type="number" id="pDy" value="${+c.dy||0}" step="8"></label>
    <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label>
@@ -348,7 +364,7 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   const sv=()=>{c.modo=$("#pModo").value;c.lang=$("#pLang").value;c.dx=+$("#pDx").value||0;c.dy=+$("#pDy").value||0;c.copias=Math.max(1,Math.min(9,+$("#pCop").value||1));c.espera=Math.max(0,+$("#pEsp").value||0);c.auto=$("#pAuto").checked;c.logos=$("#pLogo").checked;saveState();prnStatus()};
   o.querySelectorAll("select,input").forEach(e=>e.onchange=sv);
   $("#pPick").onclick=async()=>{sv();if(c.modo==="rawbt"){toast("No modo RawBT a impressora é escolhida dentro do app RawBT.");return}if(c.modo==="sistema"){toast("Neste modo a impressora é escolhida na janela de impressão do Android, ao imprimir.");return}
-    try{await PRN.escolher();await PRN.abrir();$("#pInfo").textContent="✓ Impressora conectada.";prnStatus();sOk()}catch(e){if(e&&e.name==="NotFoundError")return;$("#pInfo").textContent="⚠ "+((e&&e.message)||"Não foi possível conectar.");sBad()}};
+    try{if(c.modo==="ble"){await BLE.escolher();const ch=await BLE.abrir();$("#pInfo").textContent="✓ Impressora conectada por BLE ("+ch.service.uuid.slice(0,8)+").";}else{await PRN.escolher();await PRN.abrir();$("#pInfo").textContent="✓ Impressora conectada."}prnStatus();sOk()}catch(e){if(e&&e.name==="NotFoundError")return;$("#pInfo").textContent="⚠ "+((e&&e.message)||"Não foi possível conectar.");sBad()}};
   $("#pTest").onclick=async()=>{sv();closeSheet();await testePrint()};
   // calibração do sensor de etiqueta (gap) e modo térmico direto, gravado na impressora
   $("#pCal").onclick=async()=>{sv();if(c.modo==="sistema"){toast("Use a conexão Bluetooth direto ou RawBT.");return}
@@ -360,7 +376,7 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
       "^XA^FO40,40^ADN,36,20^FDTESTE B fonte D^FS^XZ\n",
       "^XA~SD28^MD20^FO40,40^GB500,140,140^FS^XZ\n",
       "^XA~SD28^MD20^FO40,300^A0N,60,60^FDTESTE D meio^FS^FO40,500^A0N,60,60^FDTESTE D baixo^FS^XZ\n"];
-    try{if(c.modo==="rawbt")await enviarBruto(enc(jobs.join("")));else for(const j of jobs){await PRN.enviar(enc(j));await new Promise(ok=>setTimeout(ok,600))}
+    try{if(c.modo==="rawbt")await enviarBruto(enc(jobs.join("")));else for(const j of jobs){await enviarBruto(enc(j));await new Promise(ok=>setTimeout(ok,600))}
       $("#pInfo").innerHTML="Enviadas 4 etiquetas de teste. Me diga o que saiu: <b>A</b> texto escuro · <b>B</b> outra fonte · <b>C</b> retângulo preto (sem texto) · <b>D</b> texto no meio/embaixo.";sOk()}
     catch(e){$("#pInfo").textContent="⚠ "+((e&&e.message)||"Falha ao enviar.");sBad()}};
   // envia um texto curto em cada linguagem: a impressora imprime legível só a linha da linguagem que ela entende
