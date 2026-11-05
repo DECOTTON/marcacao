@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Marcação</title>
+<meta name="theme-color" content="#061637">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Marcação">
+<style>
+:root{--ink:#0F1B1A;--mut:#3E4A48;--bg:#EEF1F0;--card:#fff;--line:#C9D1CF;--acc:#061637;--acc2:#4DA4D9;--ok:#1E8E3E;--bad:#C62828;--warn:#B26A00;--warnbg:#FFF2D6}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+button{font:inherit;cursor:pointer}
+header{flex-wrap:wrap;position:sticky;top:0;z-index:5;background:var(--acc);color:#fff;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+header h1{font-size:19px;margin:0;flex:1;display:flex;flex-wrap:wrap;align-items:center;column-gap:8px}header h1 small{flex:1 1 100%}.hlogo{width:30px;height:30px;border-radius:7px;background:#fff}
+header small{display:block;font-size:12px;opacity:.85;font-weight:500}
+.hb{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:7px 10px;font-size:14px;font-weight:700}
+.pst{font-size:12px;font-weight:700;border-radius:20px;padding:4px 10px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);color:#fff}.pst.on{background:#1E8E3E;border-color:#1E8E3E}
+main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.card h2{font-size:14px;letter-spacing:.04em;text-transform:uppercase;margin:0 0 8px;color:var(--acc)}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:12px 14px;font-weight:700;font-size:16px}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.big{width:100%;padding:16px;font-size:18px}
+.btn.prt{background:#1E8E3E;border-color:#1E8E3E;color:#fff;font-size:22px;padding:18px}
+.btn:disabled{opacity:.45}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 auto}
+.scan{width:100%;font:700 20px/1.2 ui-monospace,Menlo,monospace;padding:14px;border:3px solid var(--acc);border-radius:12px;color:var(--ink);background:#fff;-webkit-text-fill-color:var(--ink)}
+.scan::placeholder{font:500 15px system-ui,sans-serif;color:#6B7774;-webkit-text-fill-color:#6B7774}
+.hint{font-size:13px;color:var(--mut);margin:6px 0 0}
+.muted{color:var(--mut)}
+.sbar{flex:1 1 100%;display:flex;gap:6px;margin-top:4px}.sbar .scan{flex:1;min-width:0;padding:10px 12px;font-size:19px;border:2px solid var(--acc2)}
+.sb{border:0;border-radius:10px;padding:0 12px;font-weight:800;font-size:16px;background:#fff;color:var(--ink)}.sb.pri{background:var(--acc2);color:#fff}
+.fd .flote{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.lab{display:block;font-size:12px;font-weight:800;color:var(--mut);letter-spacing:.04em}
+.lote{font:900 64px/1 system-ui,sans-serif;color:var(--ink)}
+.fardo{display:inline-block;font:900 44px/1.05 ui-monospace,Menlo,monospace;background:var(--ink);color:#fff;border-radius:8px;padding:4px 14px;letter-spacing:.04em}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.g2>div{background:#F4F6F5;border-radius:8px;padding:8px 10px}.g2 b{display:block;font-size:19px}
+.sai{font:700 15px ui-monospace,Menlo,monospace;word-break:break-all;margin-top:10px;background:#F4F6F5;border-radius:8px;padding:8px 10px}
+.msg{border-radius:12px;padding:12px;text-align:center;font-weight:800;font-size:18px;margin:10px 0}
+.msg.ok{background:#DDF3E3;color:#14552A}.msg.warn{background:var(--warnbg);color:#6B4100}.msg.bad{background:#FDECEA;color:#8A1C12}.msg.idle{background:#EEF1F0;color:var(--mut);font-weight:600;font-size:15px}
+.prev{width:100%;border:1px dashed var(--line);border-radius:8px;background:#fff;image-rendering:pixelated;margin-top:10px}
+.lst{list-style:none;margin:0;padding:0}.lst li{border-top:1px solid var(--line);padding:8px 2px;display:flex;gap:8px;align-items:center}.lst li:first-child{border-top:0}.lst li .r{margin-left:auto;text-align:right;font-size:13px}
+.ovl{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:#fff;width:100%;max-width:640px;border-radius:16px 16px 0 0;padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom));max-height:88vh;overflow:auto}
+.sheet h3{margin:0 0 10px;font-size:19px}
+.sheet label.opt{display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line);font-size:16px}.sheet label.opt input{width:22px;height:22px}
+.sheet .fl{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.sheet .fl span{display:block;font-size:12px;font-weight:700;color:var(--mut)}.sheet .fl input,.sheet .fl select{width:100%;font-size:17px;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+.cam{position:fixed;inset:0;z-index:45;background:#000;display:flex;flex-direction:column}
+.cam video{flex:1;width:100%;object-fit:cover}
+.cam .cbar{display:flex;gap:8px;padding:10px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:#111}
+.cam .tgt{position:absolute;left:8%;right:8%;top:30%;height:26%;border:3px solid rgba(255,255,255,.85);border-radius:12px;pointer-events:none}
+.cam .cmsg{position:absolute;left:0;right:0;top:12px;text-align:center;color:#fff;font-weight:700;text-shadow:0 1px 3px #000}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1D2E2C;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;font-weight:600;max-width:90vw;text-align:center}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<header><h1><img src="logo.png" alt="" class="hlogo">Marcação<small id="hSub">Sem pacote carregado</small></h1><span class="pst" id="pSt">🖨 —</span><button class="hb" id="bMenu" type="button">☰ Menu</button>
+<div id="sbar" class="sbar hide"><input class="scan" id="scan" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="numeric" enterkeyhint="go" placeholder="Etiqueta SAI ou Nº do fardinho"><button class="sb" id="bGo" type="button">OK</button><button class="sb pri" id="bCam" type="button" title="Câmera">📷</button></div></header>
+<main id="app"></main>
+<input type="file" id="fPac" accept=".txt,.json,text/plain,application/json" hidden>
+<script src="qrcode.js"></script>
+<script>
+"use strict";
+// ======================================================================
+// App offline de MARCAÇÃO de fardos (coletor) — equipe de separação
+// Lê a etiqueta SAI, mostra lote/fardo/prensa/produtor (do pacote gerado
+// no app principal) e imprime a etiqueta 100×75 mm na Sewoo LK-P400 via
+// Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
+// Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
+// ======================================================================
+const VER="1.0.0";
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
+const g3=v=>String(v).replace(/\B(?=(\d{3})+(?!\d))/g," ");
+function toast(t,ms){const d=document.createElement("div");d.className="toast";d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),ms||2600)}
+
+// ---------- armazenamento no aparelho (IndexedDB) ----------
+const DB={db:null,
+  open(){return this.db?Promise.resolve(this.db):new Promise((ok,ko)=>{const r=indexedDB.open("marcacao",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>{this.db=r.result;ok(this.db)};r.onerror=()=>ko(r.error)})},
+  async get(k){const db=await this.open();return new Promise((ok,ko)=>{const q=db.transaction("kv").objectStore("kv").get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>ko(q.error)})},
+  async set(k,v){const db=await this.open();return new Promise((ok,ko)=>{const t=db.transaction("kv","readwrite");t.objectStore("kv").put(v,k);t.oncomplete=()=>ok();t.onerror=()=>ko(t.error)})}};
+
+// ---------- estado ----------
+let PAC=null,IX=null,LOGOS=[];
+const CFG0={lang:"cpcl",modo:"serial",auto:false,dx:0,dy:0,copias:1,logos:true};
+let S={disp:"",cfg:{...CFG0},hist:[]};
+let ui={fd:null,msg:null,busy:false};
+async function saveState(){try{await DB.set("estado",S)}catch(e){toast("Não foi possível salvar no aparelho!")}}
+
+function buildIndex(P){
+  const f=new Map(),byN=new Map(),st=P.fs||3,F=P.f;
+  for(let i=0;i<F.length;i+=st){const p=F[i],n=F[i+1];f.set(p*1e7+n,i);const a=byN.get(n);if(a)a.push(p);else byN.set(n,[p])}
+  const prod=new Map();for(const L of P.lotes||[])if(L[1])prod.set(String(L[0]),L[1]);
+  return{f,byN,st,prod}}
+const nFard=P=>Math.round(P.f.length/(P.fs||3));
+const rowLote=ri=>{const li=PAC.f[ri+2];return li>=0?PAC.lc[li]:""};
+const rowDate=(ri,o)=>{if(!PAC.dd||(PAC.fs||3)<5)return"";return PAC.dd[PAC.f[ri+o]]||""};
+const prodOfLote=c=>{if(!c)return"";const i=PAC.lc.indexOf(c);return (i>=0&&PAC.lp&&PAC.lp[i])||IX.prod.get(c)||""};
+
+// ---------- código SAI (GS1-128: 00 + extensão + empresa + prensa + nº de 6 dígitos + dígito verificador) ----------
+function saiCheck(d17){let t=0;for(let i=0;i<17;i++)t+=+d17[16-i]*(i%2?1:3);return (10-t%10)%10}
+function parseSAI(v){const d=String(v??"").replace(/\D/g,"");if(!d)return null;
+  if(d.length===20&&d.startsWith("00")){const ss=d.slice(2);return{num:+d.slice(13,19),prensa:+d[12],ok:saiCheck(ss)===+ss[17],sai:true,code:d}}
+  if(d.length<=7)return{num:+d,prensa:null,ok:true,sai:false};return{bad:true}}
+function scanParse(txt){
+  const m=String(txt||"").match(/\/00\/(\d{18})(?!\d)/);if(m){const p=parseSAI("00"+m[1]);if(p&&p.sai)return p}
+  const d=String(txt||"").replace(/\D/g,"");let bad=null;
+  for(let i=0;i+20<=d.length;i++){if(d[i]!=="0"||d[i+1]!=="0")continue;const p=parseSAI(d.slice(i,i+20));if(p&&p.sai){if(p.ok)return p;bad=bad||p}}
+  if(bad)return{...bad,badCheck:true};if(d&&d.length<=7)return{num:+d,prensa:null,ok:true,sai:false};return null}
+// prefixo SAI da algodoeira (00 + extensão + empresa) aprendido das etiquetas lidas: monta o código de fardo digitado à mão
+function saiFrom(pref,p,n){if(!pref||!p)return"";const d17=(pref.slice(2)+String(p)+String(n).padStart(6,"0"));if(d17.length!==17)return"";return "00"+d17+saiCheck(d17)}
+
+// ---------- sons e vibração ----------
+let AC=null;function beep(f,ms,n){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const t0=AC.currentTime;for(let i=0;i<(n||1);i++){const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=f;o.type="square";g.gain.value=.12;o.connect(g);g.connect(AC.destination);const s=t0+i*(ms+70)/1000;o.start(s);o.stop(s+ms/1000)}}catch(e){}}
+const vib=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+const sOk=()=>{beep(1250,70);vib(40)},sWarn=()=>{beep(600,120,2);vib([60,60,60])},sBad=()=>{beep(260,260,3);vib([300,120,300])};
+
+// ======================================================================
+// ETIQUETA 100 × 75 mm (203 dpi = 8 pontos/mm → 800 × 600 pontos)
+// desenhada num canvas e enviada à impressora como imagem 1 bit
+// ======================================================================
+const LW=800,LH=600;
+// Code 128 (conjunto C, só dígitos em pares)
+const C128=["212222","222122","222221","121223","121322","131222","122213","122312","132212","221213","221312","231212","112232","122132","122231","113222","123122","123221","223211","221132","221231","213212","223112","312131","311222","321122","321221","312212","322112","322211","212123","212321","232121","111323","131123","131321","112313","132113","132311","211313","231113","231311","112133","112331","132131","113123","113321","133121","313121","211331","231131","213113","213311","213131","311123","311321","331121","312113","312311","332111","314111","221411","431111","111224","111422","121124","121421","141122","141221","112214","112412","122114","122411","142112","142211","241211","221114","413111","241112","134111","111242","121142","121241","114212","124112","124211","411212","421112","421211","212141","214121","412121","111143","111341","131141","114113","114311","411113","411311","113141","114131","311141","411131","211412","211214","211232","2331112"];
+function c128C(digits){const d=String(digits);if(!/^\d+$/.test(d)||d.length%2)return null;const v=[105];for(let i=0;i<d.length;i+=2)v.push(+d.slice(i,i+2));let s=v[0];for(let i=1;i<v.length;i++)s+=v[i]*i;v.push(s%103);v.push(106);
+  const mods=[];for(const c of v){const p=C128[c];for(let i=0;i<p.length;i++)for(let k=0;k<+p[i];k++)mods.push(i%2===0?1:0)}return mods}
+function fitText(ctx,t,font,maxW,maxPx,minPx){let px=maxPx;do{ctx.font=font.replace("{px}",px);if(ctx.measureText(t).width<=maxW)break;px-=2}while(px>minPx);return px}
+function loadImg(src){return new Promise(ok=>{if(!src)return ok(null);const im=new Image();im.onload=()=>ok(im);im.onerror=()=>ok(null);im.src=src})}
+// logo colorido → preto e branco com pontilhado (Floyd–Steinberg) para sair nítido na térmica
+function drawLogo(ctx,im,x,y,maxW,maxH,alignR){const k=Math.min(maxW/im.width,maxH/im.height),w=Math.max(1,Math.round(im.width*k)),h=Math.max(1,Math.round(im.height*k)),x0=alignR?x+maxW-w:x,y0=y+Math.round((maxH-h)/2);
+  const c=document.createElement("canvas");c.width=w;c.height=h;const g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,w,h);g.drawImage(im,0,0,w,h);const id=g.getImageData(0,0,w,h),D=id.data,L=new Float32Array(w*h);
+  for(let i=0;i<w*h;i++){const a=D[i*4+3]/255;L[i]=(D[i*4]*.299+D[i*4+1]*.587+D[i*4+2]*.114)*a+255*(1-a)}
+  for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){const i=yy*w+xx,o=L[i],nv=o<150?0:255,e=o-nv;L[i]=nv;if(xx+1<w)L[i+1]+=e*7/16;if(yy+1<h){if(xx>0)L[i+w-1]+=e*3/16;L[i+w]+=e*5/16;if(xx+1<w)L[i+w+1]+=e/16}}
+  for(let i=0;i<w*h;i++){const v=L[i]<128?0:255;D[i*4]=D[i*4+1]=D[i*4+2]=v;D[i*4+3]=255}g.putImageData(id,0,0);ctx.drawImage(c,x0,y0)}
+async function drawLabel(cv,fd){cv.width=LW;cv.height=LH;const ctx=cv.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,LW,LH);ctx.fillStyle="#000";ctx.textBaseline="alphabetic";
+  const M=14;let y=M;
+  // logos (vêm do pacote)
+  if(S.cfg.logos&&LOGOS.length){const ims=(await Promise.all(LOGOS.map(loadImg))).filter(Boolean);if(ims[0])drawLogo(ctx,ims[0],M,y,250,70,false);if(ims[1])drawLogo(ctx,ims[1],LW-M-250,y,250,70,true);y+=78}
+  else y+=6;
+  // LOTE em fonte grande (para o operador da pá carregadeira)
+  ctx.font="800 34px system-ui,Roboto,sans-serif";ctx.fillText("LOTE",M,y+28);
+  const lt=String(fd.lote||"—"),px=fitText(ctx,lt,"900 {px}px system-ui,Roboto,sans-serif",LW-2*M-90,230,90);ctx.font=`900 ${px}px system-ui,Roboto,sans-serif`;
+  const tw=ctx.measureText(lt).width;ctx.fillText(lt,Math.max(M+90,(LW-tw)/2+30),y+Math.round(px*.78)+10);y+=Math.round(px*.78)+26;
+  ctx.fillRect(M,y,LW-2*M,4);y+=14;
+  // FARDO em destaque (fundo preto, número branco)
+  ctx.font="800 26px system-ui,Roboto,sans-serif";ctx.fillText("FARDO",M,y+46);
+  const fn=g3(fd.n);ctx.font="900 66px ui-monospace,Roboto Mono,monospace";const fw=ctx.measureText(fn).width+36;ctx.fillRect(M+100,y,fw,78);ctx.fillStyle="#fff";ctx.fillText(fn,M+118,y+62);ctx.fillStyle="#000";
+  ctx.font="700 28px system-ui,Roboto,sans-serif";ctx.fillText(`Prensa ${fd.p||"—"}`,M+100+fw+20,y+50);y+=92;
+  // produtor/fazenda e data de beneficiamento
+  const pr=String(fd.prod||"").toUpperCase();ctx.font=`700 ${fitText(ctx,pr||"—","700 {px}px system-ui,Roboto,sans-serif",LW-2*M,34,22)}px system-ui,Roboto,sans-serif`;ctx.fillText(pr||"—",M,y+30);y+=40;
+  // código de barras SAI + QR pequenos (para identificar o fardo se a etiqueta SAI se perder)
+  const code=fd.code||"",qs=118,yb=LH-M-qs;
+  if(code&&typeof qrcode==="function"){try{const q=qrcode(0,"M");q.addData(code);q.make();const n=q.getModuleCount(),m=Math.floor(qs/(n+2)),q0=LW-M-m*(n+2);for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))ctx.fillRect(q0+m*(c+1),yb+m*(r+1),m,m)}catch(e){}}
+  const mods=code?c128C(code):null;
+  if(mods){const mw=Math.max(2,Math.min(3,Math.floor((LW-2*M-qs-30)/(mods.length+20)))),bw=mods.length*mw,bx=M+10*mw,bh=78;for(let i=0;i<mods.length;i++)if(mods[i])ctx.fillRect(bx+i*mw,yb,mw,bh);
+    ctx.font="600 22px ui-monospace,Roboto Mono,monospace";const t=`(${code.slice(0,2)}) ${code.slice(2)}`;ctx.fillText(t,bx,yb+bh+26)}
+  else{ctx.font="600 22px system-ui,Roboto,sans-serif";ctx.fillText(code?`SAI ${code}`:"Código SAI não disponível (fardo digitado)",M,LH-M-10)}
+  return cv}
+// canvas → bits (1 = ponto preto), deslocado pelos ajustes dx/dy
+function toBits(cv){const w=cv.width,h=cv.height,D=cv.getContext("2d").getImageData(0,0,w,h).data,wb=Math.ceil(w/8),b=new Uint8Array(wb*h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4;if(D[i]<128)b[y*wb+(x>>3)]|=0x80>>(x&7)}return{w,h,wb,b}}
+const hex2=v=>v.toString(16).padStart(2,"0").toUpperCase();
+// faixas da imagem com tinta (pula as partes em branco: menos dados pelo Bluetooth)
+function bands(B,step){const out=[];for(let y0=0;y0<B.h;y0+=step){const h=Math.min(step,B.h-y0);let x0=B.wb,x1=-1;for(let y=y0;y<y0+h;y++)for(let x=0;x<B.wb;x++)if(B.b[y*B.wb+x]){if(x<x0)x0=x;if(x>x1)x1=x}
+  if(x1>=0)out.push({y0,h,x0,n:x1-x0+1})}return out}
+const enc=s=>new TextEncoder().encode(s);
+function cat(parts){let n=0;for(const p of parts)n+=p.length;const o=new Uint8Array(n);let i=0;for(const p of parts){o.set(p,i);i+=p.length}return o}
+function job(B,copias){const L=S.cfg.lang,dx=Math.round(+S.cfg.dx||0),dy=Math.round(+S.cfg.dy||0),q=Math.max(1,Math.min(9,+copias||1));
+  if(L==="zpl"){const P=[`^XA^PW${LW}^LL${LH}^LH${Math.max(0,dx)},${Math.max(0,dy)}^PON\n`];
+    for(const s of bands(B,24)){let hx="";for(let y=s.y0;y<s.y0+s.h;y++)for(let x=s.x0;x<s.x0+s.n;x++)hx+=hex2(B.b[y*B.wb+x]);P.push(`^FO${s.x0*8},${s.y0}^GFA,${s.n*s.h},${s.n*s.h},${s.n},${hx}^FS\n`)}
+    P.push(`^PQ${q}^XZ\n`);return enc(P.join(""))}
+  // CPCL: gráfico binário (CG) por faixa — metade dos dados do hexadecimal
+  if(L==="cpcl"){const P=[enc(`! ${Math.max(0,dx)} 200 200 ${LH} ${q}\r\n`)];
+    for(const s of bands(B,24)){const d=new Uint8Array(s.n*s.h);let i=0;for(let y=s.y0;y<s.y0+s.h;y++)for(let x=s.x0;x<s.x0+s.n;x++)d[i++]=B.b[y*B.wb+x];P.push(enc(`CG ${s.n} ${s.h} ${s.x0*8} ${s.y0+Math.max(0,dy)} `),d,enc("\r\n"))}
+    P.push(enc("FORM\r\nPRINT\r\n"));return cat(P)}
+  // ESC/POS: imagem inteira (GS v 0) e avanço até a próxima etiqueta
+  const parts=[];for(let c=0;c<q;c++){parts.push(new Uint8Array([0x1B,0x40]));if(dy>0)parts.push(new Uint8Array([0x1B,0x4A,Math.min(255,dy)]));
+    parts.push(new Uint8Array([0x1D,0x76,0x30,0,B.wb&255,B.wb>>8,B.h&255,B.h>>8]),B.b,new Uint8Array([0x1D,0x0C]))}return cat(parts)}
+
+// ======================================================================
+// IMPRESSORA: Bluetooth pelo Chrome (Web Serial / porta serial SPP) ou app RawBT
+// ======================================================================
+const SPP="00001101-0000-1000-8000-00805f9b34fb";
+const PRN={port:null,writer:null,
+  ok(){return "serial" in navigator},
+  async lembrada(){if(!this.ok())return null;try{const ps=await navigator.serial.getPorts();return ps[0]||null}catch(e){return null}},
+  async escolher(){if(!this.ok())throw new Error("Este navegador não tem acesso a impressoras Bluetooth (precisa do Chrome 138 ou mais novo).");
+    const p=await navigator.serial.requestPort({allowedBluetoothServiceClassIds:[SPP],filters:[{bluetoothServiceClassId:SPP}]});await this.fechar();this.port=p;return p},
+  async abrir(){if(!this.port)this.port=await this.lembrada();if(!this.port)throw new Error("Nenhuma impressora escolhida. Toque em 🖨 Impressora › Escolher impressora.");
+    if(!this.port.writable){try{await this.port.open({baudRate:115200})}catch(e){if(!/already open/i.test(String(e&&e.message)))throw new Error("Não conectou na impressora. Confira se ela está ligada, pareada no Bluetooth do coletor e perto.")}}
+    return this.port},
+  async enviar(bytes){await this.abrir();const w=this.port.writable.getWriter();try{for(let i=0;i<bytes.length;i+=1024){await w.write(bytes.subarray(i,i+1024))}}finally{w.releaseLock()}},
+  async fechar(){try{if(this.port&&this.port.readable)await this.port.close()}catch(e){}try{if(this.port&&this.port.writable)await this.port.close()}catch(e){}},
+  nome(){const p=this.port;if(!p)return"";try{const i=p.getInfo();return i.bluetoothServiceClassId?"Bluetooth":"Serial"}catch(e){return""}}};
+async function prnStatus(){const e=$("#pSt");if(!e)return;if(S.cfg.modo==="rawbt"){e.textContent="🖨 RawBT";e.className="pst on";return}
+  const p=PRN.port||await PRN.lembrada();e.textContent=p?"🖨 Pronta":"🖨 Sem impressora";e.className="pst"+(p?" on":"")}
+async function imprimir(fd,copias){if(ui.busy)return;if(!fd||!fd.lote){toast("Fardo sem lote: não imprime.");sBad();return}
+  ui.busy=true;render();
+  try{const cv=await drawLabel(document.createElement("canvas"),fd),B=toBits(cv),bytes=job(B,copias||S.cfg.copias);
+    if(S.cfg.modo==="rawbt"){let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));location.href="rawbt:base64,"+btoa(s)}
+    else await PRN.enviar(bytes);
+    if(!fd.teste){S.hist.unshift({p:fd.p,n:fd.n,lote:fd.lote,t:Date.now()});S.hist=S.hist.slice(0,300);saveState()}
+    ui.msg={c:"ok",t:`✓ Etiqueta enviada · lote ${fd.lote} · fardo ${g3(fd.n)}`};sOk()}
+  catch(e){ui.msg={c:"bad",t:(e&&e.message)||"Falha ao imprimir"};sBad()}
+  finally{ui.busy=false;render();prnStatus()}}
+async function testePrint(){const d17="0"+"789000000"+"1"+"123456",fd={p:1,n:123456,lote:"1234",prod:"ETIQUETA DE TESTE · "+new Date().toLocaleString("pt-BR"),code:"00"+d17+saiCheck(d17),teste:true};await imprimir(fd,1)}
+
+// ======================================================================
+// LEITURA
+// ======================================================================
+function findFard(P){if(P.prensa){const ri=IX.f.get(P.prensa*1e7+P.num);return ri===undefined?null:{p:P.prensa,n:P.num,ri}}
+  const ps=IX.byN.get(P.num)||[];if(!ps.length)return null;if(ps.length===1)return{p:ps[0],n:P.num,ri:IX.f.get(ps[0]*1e7+P.num)};return{amb:ps}}
+function onRead(raw){if(!PAC){toast("Carregue o pacote primeiro.");return}const P=scanParse(raw);
+  if(!P||P.bad){ui.fd=null;ui.msg={c:"bad",t:"Leitura não reconhecida. Leia a etiqueta SAI (código de barras ou QR) ou digite o nº do fardo."};sBad();render();return}
+  if(P.badCheck){ui.fd=null;ui.msg={c:"bad",t:"Código SAI com dígito verificador errado. Leia de novo."};sBad();render();return}
+  if(P.code&&!S.pref)S.pref=P.code.slice(0,12);
+  const r=findFard(P);
+  if(r&&r.amb){showSheet(`<h3>Fardo ${g3(P.num)}: qual prensa?</h3><p class="muted">Esse número existe em mais de uma prensa.</p>${r.amb.map(p=>`<button class="btn big" type="button" data-pp="${p}" style="margin-bottom:8px">Prensa ${p}</button>`).join("")}<button class="btn big" type="button" data-x>Cancelar</button>`,o=>{
+    o.querySelectorAll("[data-pp]").forEach(b=>b.onclick=()=>{closeSheet();show({prensa:+b.dataset.pp,num:P.num,ok:true})})});return}
+  show(P,r)}
+function show(P,r){r=r||findFard(P);
+  if(!r){ui.fd={p:P.prensa,n:P.num,lote:"",prod:"",code:P.code||"",nf:true};ui.msg={c:"bad",t:`Fardo ${g3(P.num)}${P.prensa?` (prensa ${P.prensa})`:""} não está no pacote. Gere um pacote novo no app principal.`};sBad();render();return}
+  const lote=rowLote(r.ri),code=P.code||saiFrom(S.pref,r.p,r.n);
+  ui.fd={p:r.p,n:r.n,lote,prod:prodOfLote(lote),code,dben:rowDate(r.ri,3),dsai:rowDate(r.ri,4)};
+  const ja=S.hist.find(h=>h.p===r.p&&h.n===r.n);
+  if(!lote){ui.msg={c:"warn",t:"Fardo sem lote no pacote (aguardando HVI / lote não criado). Não imprime."};sWarn()}
+  else if(ja){ui.msg={c:"warn",t:`Já impresso neste aparelho em ${new Date(ja.t).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}.`};sWarn()}
+  else{ui.msg=null;sOk()}
+  render();if(lote&&!ja&&S.cfg.auto)imprimir(ui.fd)}
+
+// ======================================================================
+// TELA
+// ======================================================================
+function render(){
+  $("#sbar").classList.toggle("hide",!PAC);
+  $("#hSub").textContent=PAC?`Pacote de ${new Date(PAC.gerado).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})} · ${S.disp||"aparelho"}`:"Sem pacote carregado";
+  const a=$("#app");
+  if(!PAC){a.innerHTML=`<div class="card"><h2>Comece por aqui</h2><p>Este app lê a etiqueta SAI do fardo, mostra o lote e imprime a etiqueta de marcação. Funciona <b>sem internet</b>.</p>
+    <ol><li>No app principal (com internet): <b>Fardinhos a emblocar › 📟 Coletor › Baixar pacote para o coletor</b> (o mesmo pacote do app Emblocamento).</li><li>Aqui: toque em <b>Carregar pacote</b> e escolha o arquivo <b>Pacote para o coletor - …</b>.</li><li>Em <b>☰ Menu › Impressora</b>, escolha a Sewoo LK-P400 (pareada no Bluetooth do coletor).</li></ol>
+    <button class="btn pri big" type="button" id="bPac">📂 Carregar pacote</button></div>`;$("#bPac").onclick=()=>$("#fPac").click();return}
+  const f=ui.fd,m=ui.msg;
+  a.innerHTML=`${m?`<div class="msg ${m.c}">${esc(m.t)}</div>`:""}
+   ${f?`<div class="card fd">
+     <div class="flote"><div><span class="lab">LOTE</span><span class="lote">${esc(f.lote||"—")}</span></div><div style="margin-left:auto;text-align:right"><span class="lab">FARDO</span><span class="fardo">${esc(g3(f.n))}</span></div></div>
+     <div class="g2"><div><span class="lab">PRENSA</span><b>${esc(f.p||"—")}</b></div><div><span class="lab">PRODUTOR / FAZENDA</span><b>${esc(f.prod||"—")}</b></div></div>
+     <div class="sai"><span class="lab">CÓDIGO DE BARRAS SAI</span>${f.code?esc(f.code):"<span class='muted'>— (nº digitado; leia a etiqueta para ter o código)</span>"}</div>
+     ${f.dsai?`<p class="hint" style="color:var(--bad);font-weight:700">Atenção: fardo já expedido em ${esc(f.dsai)}.</p>`:""}
+     <button class="btn prt big" type="button" id="bPrint" style="margin-top:12px"${!f.lote||ui.busy?" disabled":""}>${ui.busy?"Imprimindo…":"🖨 IMPRIMIR"}</button>
+     ${f.lote?`<canvas class="prev" id="cvPrev"></canvas><p class="hint">Prévia da etiqueta 100 × 75 mm.</p>`:""}</div>`
+   :`<div class="card"><div class="msg idle">Leia a etiqueta SAI do fardo…</div><p class="hint">Use o gatilho do coletor, a câmera 📷 ou digite o nº do fardo e toque em OK.</p></div>`}
+   <div class="card"><h2>Últimas impressões (${fmt(S.hist.length)})</h2><ul class="lst">${S.hist.slice(0,8).map(h=>`<li><b>Lote ${esc(h.lote)}</b><span>P${h.p} · ${g3(h.n)}</span><span class="r muted">${new Date(h.t).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</span></li>`).join("")||`<li class="muted">Nenhuma etiqueta impressa ainda.</li>`}</ul></div>`;
+  const bp=$("#bPrint");if(bp)bp.onclick=()=>imprimir(ui.fd);
+  const cv=$("#cvPrev");if(cv&&f)drawLabel(cv,f);
+  focusScan()}
+
+// ---------- folhas (menus) ----------
+function showSheet(html,wireFn){closeSheet();const o=document.createElement("div");o.className="ovl";o.innerHTML=`<div class="sheet">${html}</div>`;document.body.appendChild(o);
+  o.addEventListener("click",e=>{if(e.target===o||e.target.closest("[data-x]"))closeSheet()});if(wireFn)wireFn(o)}
+function closeSheet(){const o=$(".ovl");if(o)o.remove();setTimeout(focusScan,50)}
+$("#bMenu").onclick=()=>showSheet(`<h3>Menu</h3>
+  <button class="btn big" type="button" id="mPrn" style="margin-bottom:8px">🖨 Impressora</button>
+  <button class="btn big" type="button" id="mPac" style="margin-bottom:8px">📂 Carregar pacote novo</button>
+  <button class="btn big" type="button" id="mDisp" style="margin-bottom:8px">✎ Nome deste aparelho (${esc(S.disp||"não definido")})</button>
+  <button class="btn big" type="button" id="mHist" style="margin-bottom:8px">🗑 Limpar histórico de impressões</button>
+  <p class="hint">${PAC?`Pacote: ${fmt(nFard(PAC))} fardinhos · ${fmt(PAC.lc.length)} lotes · gerado em ${new Date(PAC.gerado).toLocaleString("pt-BR")}`:"Sem pacote."} · versão ${VER}</p>
+  <button class="btn big" type="button" data-x>Fechar</button>`,o=>{
+  $("#mPac").onclick=()=>{closeSheet();$("#fPac").click()};$("#mPrn").onclick=openPrinter;
+  $("#mDisp").onclick=()=>{const v=prompt("Nome deste aparelho (ex.: Coletor marcação 1):",S.disp||"");if(v!=null){S.disp=v.trim();saveState();closeSheet();render()}};
+  $("#mHist").onclick=()=>{if(confirm("Apagar o histórico de etiquetas impressas deste aparelho?")){S.hist=[];saveState();closeSheet();render()}}});
+function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
+  <p class="hint" style="margin-top:0">Sewoo LK-P400 · etiqueta 100 × 75 mm. Antes, pareie a impressora no Bluetooth do coletor (Configurações do Android › Bluetooth).</p>
+  <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT</option></select></label>
+   <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option></select></label>
+   <label><span>Deslocar → (pontos)</span><input type="number" id="pDx" value="${+c.dx||0}" step="8"></label><label><span>Deslocar ↓ (pontos)</span><input type="number" id="pDy" value="${+c.dy||0}" step="8"></label>
+   <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label></div>
+  <label class="opt"><input type="checkbox" id="pAuto"${c.auto?" checked":""}> Imprimir sozinho logo após ler o fardo</label>
+  <label class="opt"><input type="checkbox" id="pLogo"${c.logos?" checked":""}> Logos na etiqueta ${LOGOS.length?"":"<small class='muted'>(o pacote atual não tem logos)</small>"}</label>
+  <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="pPick">Escolher impressora</button><button class="btn" type="button" id="pTest">Imprimir teste</button></div>
+  <p class="hint" id="pInfo">${PRN.ok()?"":"⚠ Este navegador não acessa impressora Bluetooth direto: atualize o Chrome (138 ou mais novo) ou use o app RawBT."}</p>
+  <p class="hint">1 mm = 8 pontos. Se a etiqueta sair deslocada, ajuste e imprima o teste de novo. Se sair só texto estranho ou nada, troque a <b>Linguagem</b>.</p>
+  <button class="btn big" type="button" data-x style="margin-top:10px">Fechar</button>`,o=>{
+  const sv=()=>{c.modo=$("#pModo").value;c.lang=$("#pLang").value;c.dx=+$("#pDx").value||0;c.dy=+$("#pDy").value||0;c.copias=Math.max(1,Math.min(9,+$("#pCop").value||1));c.auto=$("#pAuto").checked;c.logos=$("#pLogo").checked;saveState();prnStatus()};
+  o.querySelectorAll("select,input").forEach(e=>e.onchange=sv);
+  $("#pPick").onclick=async()=>{sv();if(c.modo==="rawbt"){toast("No modo RawBT a impressora é escolhida dentro do app RawBT.");return}
+    try{await PRN.escolher();await PRN.abrir();$("#pInfo").textContent="✓ Impressora conectada.";prnStatus();sOk()}catch(e){if(e&&e.name==="NotFoundError")return;$("#pInfo").textContent="⚠ "+((e&&e.message)||"Não foi possível conectar.");sBad()}};
+  $("#pTest").onclick=async()=>{sv();closeSheet();await testePrint()}})}
+
+// ---------- pacote ----------
+$("#fPac").onchange=async e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;
+  try{const j=JSON.parse(await f.text());if(j.tipo!=="rsp-coletor-pacote")throw 0;
+    PAC=j;IX=buildIndex(j);LOGOS=Array.isArray(j.logos)?j.logos.filter(Boolean):[];await DB.set("pacote",j);ui.fd=null;ui.msg=null;render();
+    toast(`Pacote carregado: ${fmt(nFard(j))} fardinhos · ${fmt(j.lc.length)} lotes${LOGOS.length?"":" · sem logos (gere o pacote de novo no app principal atualizado)"}`,4500)}
+  catch(err){toast("Arquivo inválido: escolha o pacote-coletor-… gerado no app principal.",4000)}};
+
+// ---------- leitor (gatilho do coletor, teclado ou câmera) ----------
+function focusScan(){const i=$("#scan");if(ui.kbOff)return;if(i&&PAC&&!$(".ovl")&&!$(".cam")&&document.activeElement!==i){try{i.focus({preventScroll:true})}catch(e){i.focus()}}}
+(()=>{const i=$("#scan");let tm=null;const go=()=>{clearTimeout(tm);const v=i.value.trim();i.value="";_pv="";if(v)onRead(v)};
+  $("#bGo").onclick=go;$("#bCam").onclick=openCam;
+  i.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key==="Tab"){e.preventDefault();go()}});
+  i.addEventListener("focus",()=>{ui.kbOff=false});
+  i.addEventListener("input",()=>{clearTimeout(tm);const v=i.value;if(/\/00\/\d{18}/.test(v)||/\d{20}/.test(v.replace(/\D/g,"")))tm=setTimeout(go,180)});
+  i.addEventListener("blur",()=>setTimeout(()=>{const a=document.activeElement;if(!a||a===document.body)focusScan()},300))})();
+document.addEventListener("pointerdown",e=>{const b=e.target.closest&&e.target.closest("button,.btn");if(b&&document.activeElement===$("#scan")&&!b.closest(".sheet"))e.preventDefault()},true);
+let _pv="",_pt=0;
+setInterval(()=>{const i=$("#scan");if(!i)return;const v=i.value;if(v!==_pv){_pv=v;_pt=Date.now();return}
+  if(v&&Date.now()-_pt>350&&(/\/00\/\d{18}/.test(v)||v.replace(/\D/g,"").length>=12)){i.value="";_pv="";onRead(v.trim())}},150);
+let _kb="",_kt=0,_kto=null;
+document.addEventListener("keydown",e=>{const t=e.target;if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT"))return;
+  if(e.key==="Enter"){if(_kb.length>=6){const v=_kb;_kb="";onRead(v)}_kb="";return}
+  if(e.key&&e.key.length===1){const n=Date.now();if(n-_kt>300)_kb="";_kb+=e.key;_kt=n;clearTimeout(_kto);_kto=setTimeout(()=>{if(_kb.length>=12){const v=_kb;_kb="";onRead(v)}else _kb=""},350)}},true);
+const ZXW="https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/iife/reader/index.js",ZXW_WASM="https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/reader/zxing_reader.wasm";
+let zxwP=null;function loadZXW(){if(window.ZXingWASM)return Promise.resolve();if(zxwP)return zxwP;zxwP=new Promise((ok,ko)=>{const s=document.createElement("script");s.src=ZXW;s.onload=()=>{try{const Z=window.ZXingWASM,ov={locateFile:(p,pre)=>/\.wasm$/.test(p)?ZXW_WASM:pre+p};if(Z.prepareZXingModule)Z.prepareZXingModule({overrides:ov});else if(Z.setZXingModuleOverrides)Z.setZXingModuleOverrides(ov)}catch(e){}ok()};s.onerror=()=>{zxwP=null;ko()};document.head.appendChild(s)});return zxwP}
+async function openCam(){
+  const c=document.createElement("div");c.className="cam";c.innerHTML=`<video playsinline muted autoplay></video><div class="tgt"></div><div class="cmsg" id="cMsg">Abrindo a câmera…</div><div class="cbar"><button class="btn big" type="button" id="cClose">Fechar câmera</button></div>`;document.body.appendChild(c);
+  const v=c.querySelector("video"),msg=t=>{const m=$("#cMsg");if(m)m.textContent=t};let stream=null,run=true,last="",lastT=0;
+  const close=()=>{run=false;try{stream&&stream.getTracks().forEach(t=>t.stop())}catch(e){}c.remove();focusScan()};$("#cClose").onclick=close;
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});v.srcObject=stream;await v.play()}
+  catch(e){msg("Não foi possível abrir a câmera. Permita o acesso à câmera para este app nos ajustes.");return}
+  let bd=null;try{if("BarcodeDetector" in window)bd=new BarcodeDetector({formats:["qr_code","code_128","itf","data_matrix"]})}catch(e){bd=null}
+  if(!bd){try{await loadZXW()}catch(e){msg("Leitor não carregado: abra o app uma vez com internet para ele ficar disponível offline.");return}}
+  msg("Aponte para o QR code ou o código de barras");
+  const cv=document.createElement("canvas"),ctx=cv.getContext("2d",{willReadFrequently:true});
+  const tick=async()=>{if(!run)return;
+    if(v.readyState>=2&&!$(".ovl")){try{let txt=null;const W=v.videoWidth,H=v.videoHeight;
+      if(bd){const r=await bd.detect(v);const h=(r||[]).find(x=>scanParse(x.rawValue))||(r||[])[0];txt=h&&h.rawValue}
+      else{const sw=Math.round(W*.84),sh=Math.round(H*.5),sx=Math.round((W-sw)/2),sy=Math.round(H*.25),k=Math.min(1,1280/sw);cv.width=Math.round(sw*k);cv.height=Math.round(sh*k);ctx.drawImage(v,sx,sy,sw,sh,0,0,cv.width,cv.height);
+        const rs=await window.ZXingWASM.readBarcodes(ctx.getImageData(0,0,cv.width,cv.height),{tryHarder:true,formats:["QRCode","Code128","ITF","DataMatrix"],maxNumberOfSymbols:1});const h=(rs||[]).find(x=>x.text);txt=h&&h.text}
+      const t=Date.now();if(txt&&!(txt===last&&t-lastT<2500)){last=txt;lastT=t;close();onRead(txt);return}}catch(e){}}
+    setTimeout(tick,bd?120:200)};tick()}
+
+// ---------- início ----------
+(async()=>{
+  try{const p=await DB.get("pacote");if(p){PAC=p;IX=buildIndex(p);LOGOS=Array.isArray(p.logos)?p.logos.filter(Boolean):[]}const st=await DB.get("estado");if(st)S={...S,...st,cfg:{...CFG0,...(st.cfg||{})}}}catch(e){toast("Armazenamento do aparelho indisponível.")}
+  if(navigator.storage&&navigator.storage.persist)try{navigator.storage.persist()}catch(e){}
+  render();prnStatus();
+  if("serviceWorker" in navigator)try{await navigator.serviceWorker.register("sw.js")}catch(e){}
+  try{if(navigator.wakeLock){const req=async()=>{try{await navigator.wakeLock.request("screen")}catch(e){}};req();document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")req()})}}catch(e){}
+  if("serial" in navigator)navigator.serial.addEventListener("disconnect",()=>{PRN.port=null;prnStatus()});
+})();
+</script>
+</body>
+</html>
