@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.12";
+const VER="1.0.14";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -153,13 +153,16 @@ async function drawLabel(cv,fd){cv.width=LW;cv.height=LH;const ctx=cv.getContext
   // FARDO em destaque (fundo preto, número branco) · prensa e produtor ao lado
   ctx.font="800 26px system-ui,Roboto,sans-serif";ctx.fillText("FARDO",M,y+48);
   const fn=g3(fd.n);ctx.font="900 66px ui-monospace,Roboto Mono,monospace";const fw=ctx.measureText(fn).width+36;ctx.fillRect(M+100,y,fw,78);ctx.fillStyle="#fff";ctx.fillText(fn,M+118,y+62);ctx.fillStyle="#000";
-  const xr=M+100+fw+20,wr=LW-M-xr;ctx.font="700 26px system-ui,Roboto,sans-serif";ctx.fillText(`Prensa ${fd.p||"—"}`,xr,y+28);
-  const pr=String(fd.prod||"").toUpperCase()||"—";ctx.font=`800 ${fitText(ctx,pr,"800 {px}px system-ui,Roboto,sans-serif",wr,34,18)}px system-ui,Roboto,sans-serif`;ctx.fillText(pr,xr,y+70);y+=90;
+  const yRow=y,xr=M+100+fw+20,wr=LW-M-xr-150;ctx.font="700 26px system-ui,Roboto,sans-serif";ctx.fillText(`Prensa ${fd.p||"—"}`,xr,y+28);let xTxt=xr+ctx.measureText(`Prensa ${fd.p||"—"}`).width;
+  const pr=String(fd.prod||"").toUpperCase()||"—";ctx.font=`800 ${fitText(ctx,pr,"800 {px}px system-ui,Roboto,sans-serif",wr,34,18)}px system-ui,Roboto,sans-serif`;ctx.fillText(pr,xr,y+70);xTxt=Math.max(xTxt,xr+ctx.measureText(pr).width);y+=90;
   // código de barras SAI + QR pequenos (para identificar o fardo se a etiqueta SAI se perder)
   const code=fd.code||"",qs=104,yb=LH-M-qs;
-  if(code&&typeof qrcode==="function"){try{const q=qrcode(0,"M");q.addData(code);q.make();const n=q.getModuleCount(),m=Math.floor(qs/(n+2)),q0=LW-M-m*(n+2);for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))ctx.fillRect(q0+m*(c+1),yb+m*(r+1),m,m)}catch(e){}}
+  // QR maior: base alinhada com a base do texto do código de barras, topo até logo abaixo da faixa do fardo
+  const bh=66,tBase=yb+bh+28;let qW=0;
+  if(code&&typeof qrcode==="function"){try{const q=qrcode(0,"M");q.addData(code);q.make();const n=q.getModuleCount(),lim=Math.min(tBase-yRow,LW-M-(xTxt+18),180),m=Math.max(2,Math.floor(lim/n));qW=n*m;const q0=LW-M-qW,qy=tBase-qW;
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))ctx.fillRect(q0+m*c,qy+m*r,m,m)}catch(e){}}
   const mods=code?c128C(code):null;
-  if(mods){const mw=Math.max(2,Math.min(3,Math.floor((LW-2*M-qs-30)/(mods.length+20)))),bw=mods.length*mw,bx=M+10*mw,bh=66;for(let i=0;i<mods.length;i++)if(mods[i])ctx.fillRect(bx+i*mw,yb,mw,bh);
+  if(mods){const mw=Math.max(2,Math.min(3,Math.floor((LW-2*M-Math.max(qs,qW)-30)/(mods.length+20)))),bw=mods.length*mw,bx=M+10*mw;for(let i=0;i<mods.length;i++)if(mods[i])ctx.fillRect(bx+i*mw,yb,mw,bh);
     // texto do código: nº do fardo (6 dígitos antes do verificador) maior que o resto
     const seg=[[`(${code.slice(0,2)}) ${code.slice(2,13)}`,"600 22px"],[code.slice(13,19),"900 32px"],[code.slice(19),"600 22px"]];let tx=bx;
     for(const[t,f]of seg){ctx.font=`${f} ui-monospace,Roboto Mono,monospace`;ctx.fillText(t,tx,yb+bh+28);tx+=ctx.measureText(t).width+2}}
