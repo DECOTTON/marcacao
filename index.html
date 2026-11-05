@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.18";
+const VER="1.0.19";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -335,7 +335,7 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
    <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label></div>
   <label class="opt"><input type="checkbox" id="pAuto"${c.auto?" checked":""}> Imprimir sozinho logo após ler o fardo</label>
   <label class="opt"><input type="checkbox" id="pLogo"${c.logos?" checked":""}> Logos na etiqueta ${LOGOS.length?"":"<small class='muted'>(o pacote atual não tem logos)</small>"}</label>
-  <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="pPick">Escolher impressora</button><button class="btn" type="button" id="pTest">Imprimir teste</button></div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="pLing">🔎 Descobrir linguagem</button></div>
+  <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="pPick">Escolher impressora</button><button class="btn" type="button" id="pTest">Imprimir teste</button></div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="pLing">🔎 Descobrir linguagem</button><button class="btn" type="button" id="pZdg">🧪 Diagnóstico ZPL</button></div>
   <p class="hint" id="pInfo">${PRN.ok()?"":"⚠ Este navegador não acessa impressora Bluetooth direto: atualize o Chrome (138 ou mais novo) ou use o app RawBT."}</p>
   <p class="hint">1 mm = 8 pontos. Se a etiqueta sair deslocada, ajuste e imprima o teste de novo. Se sair só texto estranho ou nada, troque a <b>Linguagem</b>.</p>
   <button class="btn big" type="button" data-x style="margin-top:10px">Fechar</button>`,o=>{
@@ -344,6 +344,15 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   $("#pPick").onclick=async()=>{sv();if(c.modo==="rawbt"){toast("No modo RawBT a impressora é escolhida dentro do app RawBT.");return}if(c.modo==="sistema"){toast("Neste modo a impressora é escolhida na janela de impressão do Android, ao imprimir.");return}
     try{await PRN.escolher();await PRN.abrir();$("#pInfo").textContent="✓ Impressora conectada.";prnStatus();sOk()}catch(e){if(e&&e.name==="NotFoundError")return;$("#pInfo").textContent="⚠ "+((e&&e.message)||"Não foi possível conectar.");sBad()}};
   $("#pTest").onclick=async()=>{sv();closeSheet();await testePrint()};
+  // diagnóstico ZPL: 4 etiquetas pequenas, cada uma testa um recurso (o nº que sair mostra o que a impressora aceita)
+  $("#pZdg").onclick=async()=>{sv();if(c.modo!=="serial"){toast("Use a conexão Bluetooth direto (Chrome) para este teste.");return}
+    const sq="FF".repeat(6*48);const jobs=["^XA^FO20,30^A0N,60,60^FDTESTE 1 texto^FS^XZ\n",
+      "^XA^CI28^PW832^LL600^LH0,0^PON^FO20,30^A0N,60,60^FDTESTE 2 config^FS^PQ1^XZ\n",
+      "^XA^FO20,30^A0N,60,60^FDTESTE 3 codigos^FS^FO20,110^BY3,3,66^BCN,66,N,N,N^FD>;00078985333027290477^FS^FO560,100^BQN,2,6^FDMA,00078985333027290477^FS^FO20,220^GB300,60,60^FS^FO34,228^A0N,48,44^FR^FD729 047^FS^XZ\n",
+      `^XA^FO20,30^A0N,60,60^FDTESTE 4 imagem^FS^FO20,120^GFA,${6*48},${6*48},6,${sq}^FS^XZ\n`];
+    try{for(const j of jobs){await PRN.enviar(enc(j));await new Promise(ok=>setTimeout(ok,600))}
+      $("#pInfo").innerHTML="Enviadas 4 etiquetas de teste. Me diga quais números saíram: <b>1</b> texto · <b>2</b> configuração · <b>3</b> código de barras, QR e caixa · <b>4</b> imagem.";sOk()}
+    catch(e){$("#pInfo").textContent="⚠ "+((e&&e.message)||"Falha ao enviar.");sBad()}};
   // envia um texto curto em cada linguagem: a impressora imprime legível só a linha da linguagem que ela entende
   $("#pLing").onclick=async()=>{sv();if(c.modo!=="serial"){toast("Use a conexão Bluetooth direto (Chrome) para este teste.");return}
     const cmd=cat([new Uint8Array([0x1B,0x40]),enc("\n ESC/POS OK\n\n\n"),enc("! 0 200 200 160 1\r\nTEXT 4 0 20 30 CPCL OK\r\nFORM\r\nPRINT\r\n"),enc("^XA^FO20,30^A0N,60,60^FDZPL OK^FS^XZ\n")]);
