@@ -35,7 +35,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 .muted{color:var(--mut)}
 .sbar{flex:1 1 100%;display:flex;gap:6px;margin-top:4px}.sbar .scan{flex:1;min-width:0;padding:10px 12px;font-size:19px;border:2px solid var(--acc2)}
 .sb{border:0;border-radius:10px;padding:0 12px;font-weight:800;font-size:16px;background:#fff;color:var(--ink)}.sb.pri{background:var(--acc2);color:#fff}
-.fd .flote{display:flex;flex-direction:column;gap:6px}.fd .flote>div:last-child{align-self:flex-end;text-align:right}
+.fd .flote{display:flex;flex-direction:column;gap:6px}.fd .flote>div{align-self:flex-start;text-align:left}
 .lab{display:block;font-size:12px;font-weight:800;color:var(--mut);letter-spacing:.04em}
 .lote{font:900 64px/1 system-ui,sans-serif;color:var(--ink)}
 .fardo{display:inline-block;font:900 44px/1.05 ui-monospace,Menlo,monospace;background:var(--ink);color:#fff;border-radius:8px;padding:4px 14px;letter-spacing:.04em}
@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.15";
+const VER="1.0.16";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -273,7 +273,7 @@ function render(){
   const f=ui.fd,m=ui.msg;
   a.innerHTML=`${m?`<div class="msg ${m.c}">${esc(m.t)}</div>`:""}
    ${f?`<div class="card fd">
-     <div class="flote"><div><span class="lab">LOTE</span><span class="lote">${esc(f.lote||"—")}</span></div><div style="margin-left:auto;text-align:right"><span class="lab">FARDO</span><span class="fardo">${esc(g3(f.n))}</span></div></div>
+     <div class="flote"><div><span class="lab">LOTE</span><span class="lote">${esc(f.lote||"—")}</span></div><div><span class="lab">FARDO</span><span class="fardo">${esc(g3(f.n))}</span></div></div>
      <div class="g2"><div><span class="lab">PRENSA</span><b>${esc(f.p||"—")}</b></div><div><span class="lab">PRODUTOR / FAZENDA</span><b>${esc(f.prod||"—")}</b></div></div>
      <div class="sai"><span class="lab">CÓDIGO DE BARRAS SAI</span>${f.code?esc(f.code):"<span class='muted'>— (nº digitado; leia a etiqueta para ter o código)</span>"}</div>
      ${f.dsai?`<p class="hint" style="color:var(--bad);font-weight:700">Atenção: fardo já expedido em ${esc(f.dsai)}.</p>`:""}
