@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.7";
+const VER="1.0.8";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -201,10 +201,26 @@ const PRN={port:null,writer:null,
   async enviar(bytes){await this.abrir();const w=this.port.writable.getWriter();try{for(let i=0;i<bytes.length;i+=1024){await w.write(bytes.subarray(i,i+1024))}}finally{w.releaseLock()}},
   async fechar(){try{if(this.port&&this.port.readable)await this.port.close()}catch(e){}try{if(this.port&&this.port.writable)await this.port.close()}catch(e){}},
   nome(){const p=this.port;if(!p)return"";try{const i=p.getInfo();return i.bluetoothServiceClassId?"Bluetooth":"Serial"}catch(e){return""}}};
-// impressora do sistema (rede/Wi-Fi, PDF): imprime a mesma etiqueta como imagem 100 × 75 mm pela janela de impressão do Android/Chrome
+// impressora do sistema (rede/Wi-Fi, PDF) — TESTE: folha A4 com a etiqueta em tamanho real (100 × 75 mm),
+// borda no contorno da etiqueta e cotas com as medidas, para conferir com régua
 function printSistema(cv,copias){return new Promise(ok=>{const url=cv.toDataURL("image/png"),n=Math.max(1,Math.min(9,+copias||1));
+  const X=30,Y=35,W=100,H=75; // posição da etiqueta na folha (mm)
+  const cota=`<svg class="ct" viewBox="0 0 210 297" width="210mm" height="297mm" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif">
+    <rect x="${X}" y="${Y}" width="${W}" height="${H}" fill="none" stroke="#000" stroke-width=".35"/>
+    <g stroke="#000" stroke-width=".25" fill="none"><line x1="${X}" y1="${Y-2}" x2="${X}" y2="${Y-11}"/><line x1="${X+W}" y1="${Y-2}" x2="${X+W}" y2="${Y-11}"/>
+      <line x1="${X}" y1="${Y-8}" x2="${X+W}" y2="${Y-8}"/>
+      <line x1="${X+W+2}" y1="${Y}" x2="${X+W+11}" y2="${Y}"/><line x1="${X+W+2}" y1="${Y+H}" x2="${X+W+11}" y2="${Y+H}"/>
+      <line x1="${X+W+8}" y1="${Y}" x2="${X+W+8}" y2="${Y+H}"/></g>
+    <g fill="#000"><path d="M${X},${Y-8} l3,-1.2 v2.4 z"/><path d="M${X+W},${Y-8} l-3,-1.2 v2.4 z"/><path d="M${X+W+8},${Y} l-1.2,3 h2.4 z"/><path d="M${X+W+8},${Y+H} l-1.2,-3 h2.4 z"/></g>
+    <text x="${X+W/2}" y="${Y-10}" font-size="4" text-anchor="middle">100 mm</text>
+    <text x="${X+W+10}" y="${Y+H/2}" font-size="4" text-anchor="middle" transform="rotate(90 ${X+W+10} ${Y+H/2})" dy="-1.2">75 mm</text>
+    <text x="${X}" y="${Y+H+9}" font-size="3.4">Teste de layout · etiqueta em tamanho real (100 × 75 mm) · imprima em escala 100% / "Tamanho real".</text>
+    <text x="${X}" y="${Y+H+14}" font-size="3.4">Confira as medidas com uma régua: se a borda não medir 100 × 75 mm, a impressora ampliou ou reduziu a página.</text>
+    <text x="${X}" y="${Y+H+19}" font-size="3.4">Na Sewoo LK-P400 sai só a etiqueta, sem borda e sem cotas.</text></svg>`;
+  const pg=`<div class="pg">${cota}<img src="${url}" style="left:${X}mm;top:${Y}mm;width:${W}mm;height:${H}mm"></div>`;
   const f=document.createElement("iframe");f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";document.body.appendChild(f);
-  const d=f.contentDocument;d.open();d.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:100mm 75mm;margin:0}html,body{margin:0;padding:0}img{display:block;width:100mm;height:75mm;page-break-after:always;image-rendering:pixelated}img:last-child{page-break-after:auto}</style></head><body>${Array.from({length:n},()=>`<img src="${url}">`).join("")}</body></html>`);d.close();
+  const d=f.contentDocument;d.open();d.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4 portrait;margin:0}html,body{margin:0;padding:0}
+    .pg{position:relative;width:210mm;height:297mm;overflow:hidden;page-break-after:always}.pg:last-child{page-break-after:auto}.pg svg.ct{position:absolute;left:0;top:0;z-index:2}.pg img{position:absolute;display:block;image-rendering:pixelated}</style></head><body>${Array.from({length:n},()=>pg).join("")}</body></html>`);d.close();
   const go=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){}setTimeout(()=>{f.remove();ok()},1500)};const im=d.images[0];if(im&&!im.complete)im.onload=go;else setTimeout(go,100)})}
 async function prnStatus(){const e=$("#pSt");if(!e)return;if(S.cfg.modo==="sistema"){e.textContent="🖨 Sistema";e.className="pst on";return}if(S.cfg.modo==="rawbt"){e.textContent="🖨 RawBT";e.className="pst on";return}
   const p=PRN.port||await PRN.lembrada();e.textContent=p?"🖨 Pronta":"🖨 Sem impressora";e.className="pst"+(p?" on":"")}
