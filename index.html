@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.17";
+const VER="1.0.18";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -178,7 +178,7 @@ function bands(B,step){const out=[];for(let y0=0;y0<B.h;y0+=step){const h=Math.m
 const enc=s=>new TextEncoder().encode(s);
 function cat(parts){let n=0;for(const p of parts)n+=p.length;const o=new Uint8Array(n);let i=0;for(const p of parts){o.set(p,i);i+=p.length}return o}
 function job(B,copias){const L=S.cfg.lang,dx=Math.round(+S.cfg.dx||0),dy=Math.round(+S.cfg.dy||0),q=Math.max(1,Math.min(9,+copias||1));
-  if(L==="zpl"){const P=[`^XA^PW${LW}^LL${LH}^LH${Math.max(0,dx)},${Math.max(0,dy)}^PON\n`];
+  if(L==="zpl"||L==="zplimg"){const P=[`^XA^PW${LW}^LL${LH}^LH${Math.max(0,dx)},${Math.max(0,dy)}^PON\n`];
     for(const s of bands(B,24)){let hx="";for(let y=s.y0;y<s.y0+s.h;y++)for(let x=s.x0;x<s.x0+s.n;x++)hx+=hex2(B.b[y*B.wb+x]);P.push(`^FO${s.x0*8},${s.y0}^GFA,${s.n*s.h},${s.n*s.h},${s.n},${hx}^FS\n`)}
     P.push(`^PQ${q}^XZ\n`);return enc(P.join(""))}
   // CPCL: gráfico binário (CG) por faixa — metade dos dados do hexadecimal
@@ -191,6 +191,30 @@ function job(B,copias){const L=S.cfg.lang,dx=Math.round(+S.cfg.dx||0),dy=Math.ro
   // ESC/POS: imagem inteira (GS v 0) e avanço até a próxima etiqueta
   const parts=[];for(let c=0;c<q;c++){parts.push(new Uint8Array([0x1B,0x40]));if(dy>0)parts.push(new Uint8Array([0x1B,0x4A,Math.min(255,dy)]));
     parts.push(new Uint8Array([0x1D,0x76,0x30,0,B.wb&255,B.wb>>8,B.h&255,B.h>>8]),B.b,new Uint8Array([0x1D,0x0C]))}return cat(parts)}
+
+// ZPL com comandos nativos da impressora (texto, código de barras, QR, caixas): poucos dados e
+// não depende de gráfico. Só os logos vão como imagem pequena (^GFA).
+async function zplNativo(fd,copias){const q=Math.max(1,Math.min(9,+copias||1)),dx=Math.max(0,Math.round(+S.cfg.dx||0)),dy=Math.max(0,Math.round(+S.cfg.dy||0)),M=14;
+  const zt=t=>String(t??"").replace(/[\^~]/g," ");const P=[`^XA^CI28^PW${LW}^LL${LH}^LH${dx},${dy}^PON\n`];
+  // logos (imagem pequena)
+  if(S.cfg.logos&&LOGOS.length){const ims=(await Promise.all(LOGOS.map(loadImg))).filter(Boolean);const cv=document.createElement("canvas");cv.width=LW;cv.height=74;const ctx=cv.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,LW,74);
+    if(ims[0])drawLogo(ctx,ims[0],M,M,230,60,false);if(ims[1])drawLogo(ctx,ims[1],LW-M-230,M,230,60,true);const B=toBits(cv);
+    for(const s of bands(B,74)){let hx="";for(let y=s.y0;y<s.y0+s.h;y++)for(let x=s.x0;x<s.x0+s.n;x++)hx+=hex2(B.b[y*B.wb+x]);P.push(`^FO${s.x0*8},${s.y0}^GFA,${s.n*s.h},${s.n*s.h},${s.n},${hx}^FS\n`)}}
+  P.push(`^FO0,26^A0N,40,40^FB${LW},1,0,C^FDLOTE^FS\n`);
+  // nº do lote: altura fixa e largura ajustada para caber
+  const lt=zt(fd.lote||"—"),h=290,w=Math.min(290,Math.floor((LW-2*M)/(Math.max(1,lt.length)*0.62)));
+  P.push(`^FO0,84^A0N,${h},${w}^FB${LW},1,0,C^FD${lt}^FS\n^FO${M},350^GB${LW-2*M},4,4^FS\n`);
+  // FARDO em destaque (caixa preta com texto invertido), prensa e produtor
+  const fn=g3(fd.n),bw=Math.round(fn.length*37+36);
+  P.push(`^FO${M},392^A0N,28,28^FDFARDO^FS\n^FO${M+100},368^GB${bw},78,78^FS\n^FO${M+118},376^A0N,70,62^FR^FD${zt(fn)}^FS\n`);
+  const xr=M+100+bw+20;P.push(`^FO${xr},372^A0N,28,28^FDPrensa ${zt(fd.p||"—")}^FS\n^FO${xr},406^A0N,36,34^FD${zt(String(fd.prod||"—").toUpperCase()).slice(0,22)}^FS\n`);
+  // código de barras SAI (Code 128 subconjunto C) com o texto embaixo, nº do fardo maior; QR à direita alinhado na base
+  const code=fd.code||"";
+  if(/^\d{20}$/.test(code)){P.push(`^FO${M+10},482^BY3,3,66^BCN,66,N,N,N^FD>;${code}^FS\n`);
+    P.push(`^FO${M+10},556^A0N,24,22^FD(${code.slice(0,2)}) ${code.slice(2,13)}^FS\n^FO${M+10+Math.round(16*12.4)},550^A0N,32,30^FD${code.slice(13,19)}^FS\n^FO${M+10+Math.round(16*12.4+6*16.5)},556^A0N,24,22^FD${code.slice(19)}^FS\n`);
+    P.push(`^FO${LW-M-170},400^BQN,2,7^FDMA,${code}^FS\n`)}
+  else P.push(`^FO${M},556^A0N,24,22^FDCodigo SAI nao disponivel (fardo digitado)^FS\n`);
+  P.push(`^PQ${q}^XZ\n`);return enc(P.join(""))}
 
 // ======================================================================
 // IMPRESSORA: Bluetooth pelo Chrome (Web Serial / porta serial SPP) ou app RawBT
@@ -232,7 +256,7 @@ async function prnStatus(){const e=$("#pSt");if(!e)return;if(S.cfg.modo==="siste
   const p=PRN.port||await PRN.lembrada();e.textContent=p?"🖨 Pronta":"🖨 Sem impressora";e.className="pst"+(p?" on":"")}
 async function imprimir(fd,copias){if(ui.busy)return;if(!fd||!fd.lote){toast("Fardo sem lote: não imprime.");sBad();return}
   ui.busy=true;render();const solta=setTimeout(()=>{if(ui.busy){ui.busy=false;render()}},8000);
-  try{const cv=await drawLabel(document.createElement("canvas"),fd),B=toBits(cv),bytes=job(B,copias||S.cfg.copias);
+  try{const cv=await drawLabel(document.createElement("canvas"),fd),B=toBits(cv),bytes=S.cfg.lang==="zpl"?await zplNativo(fd,copias||S.cfg.copias):job(B,copias||S.cfg.copias);
     if(S.cfg.modo==="sistema")await printSistema(cv,copias||S.cfg.copias);
     else if(S.cfg.modo==="rawbt"){let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));location.href="rawbt:base64,"+btoa(s)}
     else await PRN.enviar(bytes);
@@ -306,7 +330,7 @@ $("#bMenu").onclick=()=>showSheet(`<h3>Menu</h3>
 function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   <p class="hint" style="margin-top:0">Sewoo LK-P400 · etiqueta 105 × 75 mm. Antes, pareie a impressora no Bluetooth do coletor (Configurações do Android › Bluetooth).</p>
   <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT</option><option value="sistema"${c.modo==="sistema"?" selected":""}>Impressora do sistema (Wi-Fi/rede · teste)</option></select></label>
-   <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option><option value="cpcleg"${c.lang==="cpcleg"?" selected":""}>CPCL (gráfico hex · EG)</option></select></label>
+   <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="zplimg"${c.lang==="zplimg"?" selected":""}>ZPL (imagem)</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option><option value="cpcleg"${c.lang==="cpcleg"?" selected":""}>CPCL (gráfico hex · EG)</option></select></label>
    <label><span>Deslocar → (pontos)</span><input type="number" id="pDx" value="${+c.dx||0}" step="8"></label><label><span>Deslocar ↓ (pontos)</span><input type="number" id="pDy" value="${+c.dy||0}" step="8"></label>
    <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label></div>
   <label class="opt"><input type="checkbox" id="pAuto"${c.auto?" checked":""}> Imprimir sozinho logo após ler o fardo</label>
