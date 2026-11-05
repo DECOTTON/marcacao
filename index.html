@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.24";
+const VER="1.0.25";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -266,7 +266,9 @@ const BLE={dev:null,ch:null,
   async abrir(){if(!this.dev){try{const ds=navigator.bluetooth.getDevices?await navigator.bluetooth.getDevices():[];this.dev=ds[0]||null}catch(e){}}
     if(!this.dev)throw new Error("Nenhuma impressora BLE escolhida. Toque em 🖨 Impressora › Escolher impressora.");
     if(this.ch&&this.dev.gatt.connected)return this.ch;
-    const g=await this.dev.gatt.connect();let best=null;
+    let g=null,err=null;try{await PRN.fechar()}catch(e){} // libera a conexão clássica, se estiver aberta
+    for(let t=0;t<4&&!g;t++){try{g=await this.dev.gatt.connect()}catch(e){err=e;await new Promise(ok=>setTimeout(ok,1200))}}
+    if(!g)throw new Error("Não conectou por BLE ("+((err&&err.message)||"falha")+"). Feche outros apps que usam a impressora (ex.: Blockage), desligue e ligue a Sewoo e tente de novo.");let best=null;
     for(const sv of await g.getPrimaryServices()){let cs=[];try{cs=await sv.getCharacteristics()}catch(e){}for(const c of cs){if(c.properties.writeWithoutResponse||c.properties.write){best=best||c;if(BLE_SVCS.includes(sv.uuid))best=c}}if(best&&BLE_SVCS.includes(sv.uuid))break}
     if(!best)throw new Error("A impressora conectou por BLE, mas não tem canal de escrita conhecido.");this.ch=best;await new Promise(ok=>setTimeout(ok,600));return best},
   async enviar(bytes){const c=await this.abrir(),ck=Math.max(20,+S.cfg.bleBloco||180);
