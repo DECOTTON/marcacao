@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.5";
+const VER="1.0.6";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -201,12 +201,18 @@ const PRN={port:null,writer:null,
   async enviar(bytes){await this.abrir();const w=this.port.writable.getWriter();try{for(let i=0;i<bytes.length;i+=1024){await w.write(bytes.subarray(i,i+1024))}}finally{w.releaseLock()}},
   async fechar(){try{if(this.port&&this.port.readable)await this.port.close()}catch(e){}try{if(this.port&&this.port.writable)await this.port.close()}catch(e){}},
   nome(){const p=this.port;if(!p)return"";try{const i=p.getInfo();return i.bluetoothServiceClassId?"Bluetooth":"Serial"}catch(e){return""}}};
-async function prnStatus(){const e=$("#pSt");if(!e)return;if(S.cfg.modo==="rawbt"){e.textContent="🖨 RawBT";e.className="pst on";return}
+// impressora do sistema (rede/Wi-Fi, PDF): imprime a mesma etiqueta como imagem 100 × 75 mm pela janela de impressão do Android/Chrome
+function printSistema(cv,copias){return new Promise(ok=>{const url=cv.toDataURL("image/png"),n=Math.max(1,Math.min(9,+copias||1));
+  const f=document.createElement("iframe");f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";document.body.appendChild(f);
+  const d=f.contentDocument;d.open();d.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:100mm 75mm;margin:0}html,body{margin:0;padding:0}img{display:block;width:100mm;height:75mm;page-break-after:always;image-rendering:pixelated}img:last-child{page-break-after:auto}</style></head><body>${Array.from({length:n},()=>`<img src="${url}">`).join("")}</body></html>`);d.close();
+  const go=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){}setTimeout(()=>{f.remove();ok()},1500)};const im=d.images[0];if(im&&!im.complete)im.onload=go;else setTimeout(go,100)})}
+async function prnStatus(){const e=$("#pSt");if(!e)return;if(S.cfg.modo==="sistema"){e.textContent="🖨 Sistema";e.className="pst on";return}if(S.cfg.modo==="rawbt"){e.textContent="🖨 RawBT";e.className="pst on";return}
   const p=PRN.port||await PRN.lembrada();e.textContent=p?"🖨 Pronta":"🖨 Sem impressora";e.className="pst"+(p?" on":"")}
 async function imprimir(fd,copias){if(ui.busy)return;if(!fd||!fd.lote){toast("Fardo sem lote: não imprime.");sBad();return}
   ui.busy=true;render();
   try{const cv=await drawLabel(document.createElement("canvas"),fd),B=toBits(cv),bytes=job(B,copias||S.cfg.copias);
-    if(S.cfg.modo==="rawbt"){let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));location.href="rawbt:base64,"+btoa(s)}
+    if(S.cfg.modo==="sistema")await printSistema(cv,copias||S.cfg.copias);
+    else if(S.cfg.modo==="rawbt"){let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));location.href="rawbt:base64,"+btoa(s)}
     else await PRN.enviar(bytes);
     if(!fd.teste){S.hist.unshift({p:fd.p,n:fd.n,lote:fd.lote,t:Date.now()});S.hist=S.hist.slice(0,300);saveState()}
     ui.msg={c:"ok",t:`✓ Etiqueta enviada · lote ${fd.lote} · fardo ${g3(fd.n)}`};sOk()}
@@ -278,7 +284,7 @@ $("#bMenu").onclick=()=>showSheet(`<h3>Menu</h3>
   $("#mHist").onclick=()=>{if(confirm("Apagar o histórico de etiquetas impressas deste aparelho?")){S.hist=[];saveState();closeSheet();render()}}});
 function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   <p class="hint" style="margin-top:0">Sewoo LK-P400 · etiqueta 100 × 75 mm. Antes, pareie a impressora no Bluetooth do coletor (Configurações do Android › Bluetooth).</p>
-  <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT</option></select></label>
+  <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT</option><option value="sistema"${c.modo==="sistema"?" selected":""}>Impressora do sistema (Wi-Fi/rede · teste)</option></select></label>
    <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option></select></label>
    <label><span>Deslocar → (pontos)</span><input type="number" id="pDx" value="${+c.dx||0}" step="8"></label><label><span>Deslocar ↓ (pontos)</span><input type="number" id="pDy" value="${+c.dy||0}" step="8"></label>
    <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label></div>
@@ -290,7 +296,7 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   <button class="btn big" type="button" data-x style="margin-top:10px">Fechar</button>`,o=>{
   const sv=()=>{c.modo=$("#pModo").value;c.lang=$("#pLang").value;c.dx=+$("#pDx").value||0;c.dy=+$("#pDy").value||0;c.copias=Math.max(1,Math.min(9,+$("#pCop").value||1));c.auto=$("#pAuto").checked;c.logos=$("#pLogo").checked;saveState();prnStatus()};
   o.querySelectorAll("select,input").forEach(e=>e.onchange=sv);
-  $("#pPick").onclick=async()=>{sv();if(c.modo==="rawbt"){toast("No modo RawBT a impressora é escolhida dentro do app RawBT.");return}
+  $("#pPick").onclick=async()=>{sv();if(c.modo==="rawbt"){toast("No modo RawBT a impressora é escolhida dentro do app RawBT.");return}if(c.modo==="sistema"){toast("Neste modo a impressora é escolhida na janela de impressão do Android, ao imprimir.");return}
     try{await PRN.escolher();await PRN.abrir();$("#pInfo").textContent="✓ Impressora conectada.";prnStatus();sOk()}catch(e){if(e&&e.name==="NotFoundError")return;$("#pInfo").textContent="⚠ "+((e&&e.message)||"Não foi possível conectar.");sBad()}};
   $("#pTest").onclick=async()=>{sv();closeSheet();await testePrint()}})}
 
