@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.22";
+const VER="1.0.23";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -89,7 +89,7 @@ const DB={db:null,
 
 // ---------- estado ----------
 let PAC=null,IX=null,LOGOS=[];
-const CFG0={lang:"cpcl",modo:"serial",auto:false,dx:0,dy:0,copias:1,logos:true};
+const CFG0={lang:"zpl",modo:"serial",auto:false,dx:0,dy:0,copias:1,logos:true,espera:1800,bloco:256};
 let S={disp:"",cfg:{...CFG0},hist:[]};
 let ui={fd:null,msg:null,busy:false};
 async function saveState(){try{await DB.set("estado",S)}catch(e){toast("Não foi possível salvar no aparelho!")}}
@@ -226,9 +226,13 @@ const PRN={port:null,writer:null,
   async escolher(){if(!this.ok())throw new Error("Este navegador não tem acesso a impressoras Bluetooth (precisa do Chrome 138 ou mais novo).");
     const p=await navigator.serial.requestPort({allowedBluetoothServiceClassIds:[SPP],filters:[{bluetoothServiceClassId:SPP}]});await this.fechar();this.port=p;return p},
   async abrir(){if(!this.port)this.port=await this.lembrada();if(!this.port)throw new Error("Nenhuma impressora escolhida. Toque em 🖨 Impressora › Escolher impressora.");
-    if(!this.port.writable){try{await this.port.open({baudRate:115200})}catch(e){if(!/already open/i.test(String(e&&e.message)))throw new Error("Não conectou na impressora. Confira se ela está ligada, pareada no Bluetooth do coletor e perto.")}}
+    if(!this.port.writable){try{await this.port.open({baudRate:115200})}catch(e){if(!/already open/i.test(String(e&&e.message)))throw new Error("Não conectou na impressora. Confira se ela está ligada, pareada no Bluetooth do coletor e perto.")}
+      // a Sewoo puxa uma etiqueta ao conectar e descarta o que chega logo em seguida: espera ela ficar pronta
+      await new Promise(ok=>setTimeout(ok,Math.max(0,+S.cfg.espera||1800)))}
     return this.port},
-  async enviar(bytes){await this.abrir();const w=this.port.writable.getWriter();try{for(let i=0;i<bytes.length;i+=1024){await w.write(bytes.subarray(i,i+1024))}}finally{w.releaseLock()}},
+  async enviar(bytes){await this.abrir();const w=this.port.writable.getWriter(),ck=Math.max(64,+S.cfg.bloco||256);
+    try{for(let i=0;i<bytes.length;i+=ck){await w.ready;await w.write(bytes.slice(i,i+ck));await new Promise(ok=>setTimeout(ok,12))}await w.ready}finally{w.releaseLock()}
+    await new Promise(ok=>setTimeout(ok,400))},
   async fechar(){try{if(this.port&&this.port.readable)await this.port.close()}catch(e){}try{if(this.port&&this.port.writable)await this.port.close()}catch(e){}},
   nome(){const p=this.port;if(!p)return"";try{const i=p.getInfo();return i.bluetoothServiceClassId?"Bluetooth":"Serial"}catch(e){return""}}};
 // impressora do sistema (rede/Wi-Fi, PDF) — TESTE: folha A4 com a etiqueta em tamanho real (105 × 75 mm),
@@ -333,14 +337,15 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT</option><option value="sistema"${c.modo==="sistema"?" selected":""}>Impressora do sistema (Wi-Fi/rede · teste)</option></select></label>
    <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="zplimg"${c.lang==="zplimg"?" selected":""}>ZPL (imagem)</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option><option value="cpcleg"${c.lang==="cpcleg"?" selected":""}>CPCL (gráfico hex · EG)</option></select></label>
    <label><span>Deslocar → (pontos)</span><input type="number" id="pDx" value="${+c.dx||0}" step="8"></label><label><span>Deslocar ↓ (pontos)</span><input type="number" id="pDy" value="${+c.dy||0}" step="8"></label>
-   <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label></div>
+   <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label>
+   <label><span>Espera ao conectar (ms)</span><input type="number" id="pEsp" value="${+c.espera||1800}" step="500" min="0"></label></div>
   <label class="opt"><input type="checkbox" id="pAuto"${c.auto?" checked":""}> Imprimir sozinho logo após ler o fardo</label>
   <label class="opt"><input type="checkbox" id="pLogo"${c.logos?" checked":""}> Logos na etiqueta ${LOGOS.length?"":"<small class='muted'>(o pacote atual não tem logos)</small>"}</label>
   <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="pPick">Escolher impressora</button><button class="btn" type="button" id="pTest">Imprimir teste</button></div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="pLing">🔎 Descobrir linguagem</button><button class="btn" type="button" id="pZdg">🧪 Diagnóstico ZPL</button><button class="btn" type="button" id="pCal">📏 Calibrar etiqueta</button></div>
   <p class="hint" id="pInfo">${PRN.ok()?"":"⚠ Este navegador não acessa impressora Bluetooth direto: atualize o Chrome (138 ou mais novo) ou use o app RawBT."}</p>
   <p class="hint">1 mm = 8 pontos. Se a etiqueta sair deslocada, ajuste e imprima o teste de novo. Se sair só texto estranho ou nada, troque a <b>Linguagem</b>.</p>
   <button class="btn big" type="button" data-x style="margin-top:10px">Fechar</button>`,o=>{
-  const sv=()=>{c.modo=$("#pModo").value;c.lang=$("#pLang").value;c.dx=+$("#pDx").value||0;c.dy=+$("#pDy").value||0;c.copias=Math.max(1,Math.min(9,+$("#pCop").value||1));c.auto=$("#pAuto").checked;c.logos=$("#pLogo").checked;saveState();prnStatus()};
+  const sv=()=>{c.modo=$("#pModo").value;c.lang=$("#pLang").value;c.dx=+$("#pDx").value||0;c.dy=+$("#pDy").value||0;c.copias=Math.max(1,Math.min(9,+$("#pCop").value||1));c.espera=Math.max(0,+$("#pEsp").value||0);c.auto=$("#pAuto").checked;c.logos=$("#pLogo").checked;saveState();prnStatus()};
   o.querySelectorAll("select,input").forEach(e=>e.onchange=sv);
   $("#pPick").onclick=async()=>{sv();if(c.modo==="rawbt"){toast("No modo RawBT a impressora é escolhida dentro do app RawBT.");return}if(c.modo==="sistema"){toast("Neste modo a impressora é escolhida na janela de impressão do Android, ao imprimir.");return}
     try{await PRN.escolher();await PRN.abrir();$("#pInfo").textContent="✓ Impressora conectada.";prnStatus();sOk()}catch(e){if(e&&e.name==="NotFoundError")return;$("#pInfo").textContent="⚠ "+((e&&e.message)||"Não foi possível conectar.");sBad()}};
