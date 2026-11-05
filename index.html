@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.0";
+const VER="1.0.1";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -160,7 +160,9 @@ async function drawLabel(cv,fd){cv.width=LW;cv.height=LH;const ctx=cv.getContext
   if(code&&typeof qrcode==="function"){try{const q=qrcode(0,"M");q.addData(code);q.make();const n=q.getModuleCount(),m=Math.floor(qs/(n+2)),q0=LW-M-m*(n+2);for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))ctx.fillRect(q0+m*(c+1),yb+m*(r+1),m,m)}catch(e){}}
   const mods=code?c128C(code):null;
   if(mods){const mw=Math.max(2,Math.min(3,Math.floor((LW-2*M-qs-30)/(mods.length+20)))),bw=mods.length*mw,bx=M+10*mw,bh=78;for(let i=0;i<mods.length;i++)if(mods[i])ctx.fillRect(bx+i*mw,yb,mw,bh);
-    ctx.font="600 22px ui-monospace,Roboto Mono,monospace";const t=`(${code.slice(0,2)}) ${code.slice(2)}`;ctx.fillText(t,bx,yb+bh+26)}
+    // texto do código: nº do fardo (6 dígitos antes do verificador) maior que o resto
+    const seg=[[`(${code.slice(0,2)}) ${code.slice(2,13)}`,"600 22px"],[code.slice(13,19),"900 32px"],[code.slice(19),"600 22px"]];let tx=bx;
+    for(const[t,f]of seg){ctx.font=`${f} ui-monospace,Roboto Mono,monospace`;ctx.fillText(t,tx,yb+bh+28);tx+=ctx.measureText(t).width+2}}
   else{ctx.font="600 22px system-ui,Roboto,sans-serif";ctx.fillText(code?`SAI ${code}`:"Código SAI não disponível (fardo digitado)",M,LH-M-10)}
   return cv}
 // canvas → bits (1 = ponto preto), deslocado pelos ajustes dx/dy
