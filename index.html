@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.16";
+const VER="1.0.17";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -182,6 +182,9 @@ function job(B,copias){const L=S.cfg.lang,dx=Math.round(+S.cfg.dx||0),dy=Math.ro
     for(const s of bands(B,24)){let hx="";for(let y=s.y0;y<s.y0+s.h;y++)for(let x=s.x0;x<s.x0+s.n;x++)hx+=hex2(B.b[y*B.wb+x]);P.push(`^FO${s.x0*8},${s.y0}^GFA,${s.n*s.h},${s.n*s.h},${s.n},${hx}^FS\n`)}
     P.push(`^PQ${q}^XZ\n`);return enc(P.join(""))}
   // CPCL: gráfico binário (CG) por faixa — metade dos dados do hexadecimal
+  if(L==="cpcleg"){const P=[`! ${Math.max(0,dx)} 200 200 ${LH} ${q}\r\n`];
+    for(const s of bands(B,24)){let hx="";for(let y=s.y0;y<s.y0+s.h;y++)for(let x=s.x0;x<s.x0+s.n;x++)hx+=hex2(B.b[y*B.wb+x]);P.push(`EG ${s.n} ${s.h} ${s.x0*8} ${s.y0+Math.max(0,dy)} ${hx}\r\n`)}
+    P.push("FORM\r\nPRINT\r\n");return enc(P.join(""))}
   if(L==="cpcl"){const P=[enc(`! ${Math.max(0,dx)} 200 200 ${LH} ${q}\r\n`)];
     for(const s of bands(B,24)){const d=new Uint8Array(s.n*s.h);let i=0;for(let y=s.y0;y<s.y0+s.h;y++)for(let x=s.x0;x<s.x0+s.n;x++)d[i++]=B.b[y*B.wb+x];P.push(enc(`CG ${s.n} ${s.h} ${s.x0*8} ${s.y0+Math.max(0,dy)} `),d,enc("\r\n"))}
     P.push(enc("FORM\r\nPRINT\r\n"));return cat(P)}
@@ -303,12 +306,12 @@ $("#bMenu").onclick=()=>showSheet(`<h3>Menu</h3>
 function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   <p class="hint" style="margin-top:0">Sewoo LK-P400 · etiqueta 105 × 75 mm. Antes, pareie a impressora no Bluetooth do coletor (Configurações do Android › Bluetooth).</p>
   <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT</option><option value="sistema"${c.modo==="sistema"?" selected":""}>Impressora do sistema (Wi-Fi/rede · teste)</option></select></label>
-   <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option></select></label>
+   <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option><option value="cpcleg"${c.lang==="cpcleg"?" selected":""}>CPCL (gráfico hex · EG)</option></select></label>
    <label><span>Deslocar → (pontos)</span><input type="number" id="pDx" value="${+c.dx||0}" step="8"></label><label><span>Deslocar ↓ (pontos)</span><input type="number" id="pDy" value="${+c.dy||0}" step="8"></label>
    <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label></div>
   <label class="opt"><input type="checkbox" id="pAuto"${c.auto?" checked":""}> Imprimir sozinho logo após ler o fardo</label>
   <label class="opt"><input type="checkbox" id="pLogo"${c.logos?" checked":""}> Logos na etiqueta ${LOGOS.length?"":"<small class='muted'>(o pacote atual não tem logos)</small>"}</label>
-  <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="pPick">Escolher impressora</button><button class="btn" type="button" id="pTest">Imprimir teste</button></div>
+  <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="pPick">Escolher impressora</button><button class="btn" type="button" id="pTest">Imprimir teste</button></div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="pLing">🔎 Descobrir linguagem</button></div>
   <p class="hint" id="pInfo">${PRN.ok()?"":"⚠ Este navegador não acessa impressora Bluetooth direto: atualize o Chrome (138 ou mais novo) ou use o app RawBT."}</p>
   <p class="hint">1 mm = 8 pontos. Se a etiqueta sair deslocada, ajuste e imprima o teste de novo. Se sair só texto estranho ou nada, troque a <b>Linguagem</b>.</p>
   <button class="btn big" type="button" data-x style="margin-top:10px">Fechar</button>`,o=>{
@@ -316,7 +319,11 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   o.querySelectorAll("select,input").forEach(e=>e.onchange=sv);
   $("#pPick").onclick=async()=>{sv();if(c.modo==="rawbt"){toast("No modo RawBT a impressora é escolhida dentro do app RawBT.");return}if(c.modo==="sistema"){toast("Neste modo a impressora é escolhida na janela de impressão do Android, ao imprimir.");return}
     try{await PRN.escolher();await PRN.abrir();$("#pInfo").textContent="✓ Impressora conectada.";prnStatus();sOk()}catch(e){if(e&&e.name==="NotFoundError")return;$("#pInfo").textContent="⚠ "+((e&&e.message)||"Não foi possível conectar.");sBad()}};
-  $("#pTest").onclick=async()=>{sv();closeSheet();await testePrint()}})}
+  $("#pTest").onclick=async()=>{sv();closeSheet();await testePrint()};
+  // envia um texto curto em cada linguagem: a impressora imprime legível só a linha da linguagem que ela entende
+  $("#pLing").onclick=async()=>{sv();if(c.modo!=="serial"){toast("Use a conexão Bluetooth direto (Chrome) para este teste.");return}
+    const cmd=cat([new Uint8Array([0x1B,0x40]),enc("\n ESC/POS OK\n\n\n"),enc("! 0 200 200 160 1\r\nTEXT 4 0 20 30 CPCL OK\r\nFORM\r\nPRINT\r\n"),enc("^XA^FO20,30^A0N,60,60^FDZPL OK^FS^XZ\n")]);
+    try{await PRN.enviar(cmd);$("#pInfo").innerHTML="Enviado. Veja qual texto saiu legível na etiqueta: <b>ESC/POS OK</b>, <b>CPCL OK</b> ou <b>ZPL OK</b> — escolha essa linguagem acima.";sOk()}catch(e){$("#pInfo").textContent="⚠ "+((e&&e.message)||"Falha ao enviar.");sBad()}}})}
 
 // ---------- pacote ----------
 $("#fPac").onchange=async e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;
