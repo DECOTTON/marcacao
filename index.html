@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.8";
+const VER="1.0.9";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -221,11 +221,11 @@ function printSistema(cv,copias){return new Promise(ok=>{const url=cv.toDataURL(
   const f=document.createElement("iframe");f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";document.body.appendChild(f);
   const d=f.contentDocument;d.open();d.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4 portrait;margin:0}html,body{margin:0;padding:0}
     .pg{position:relative;width:210mm;height:297mm;overflow:hidden;page-break-after:always}.pg:last-child{page-break-after:auto}.pg svg.ct{position:absolute;left:0;top:0;z-index:2}.pg img{position:absolute;display:block;image-rendering:pixelated}</style></head><body>${Array.from({length:n},()=>pg).join("")}</body></html>`);d.close();
-  const go=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){}setTimeout(()=>{f.remove();ok()},1500)};const im=d.images[0];if(im&&!im.complete)im.onload=go;else setTimeout(go,100)})}
+  let foi=false;const go=()=>{if(foi)return;foi=true;ok();setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){}setTimeout(()=>f.remove(),60000)},50)};const im=d.images[0];if(im&&!im.complete){im.onload=go;im.onerror=go;setTimeout(go,2000)}else setTimeout(go,100)})}
 async function prnStatus(){const e=$("#pSt");if(!e)return;if(S.cfg.modo==="sistema"){e.textContent="🖨 Sistema";e.className="pst on";return}if(S.cfg.modo==="rawbt"){e.textContent="🖨 RawBT";e.className="pst on";return}
   const p=PRN.port||await PRN.lembrada();e.textContent=p?"🖨 Pronta":"🖨 Sem impressora";e.className="pst"+(p?" on":"")}
 async function imprimir(fd,copias){if(ui.busy)return;if(!fd||!fd.lote){toast("Fardo sem lote: não imprime.");sBad();return}
-  ui.busy=true;render();
+  ui.busy=true;render();const solta=setTimeout(()=>{if(ui.busy){ui.busy=false;render()}},8000);
   try{const cv=await drawLabel(document.createElement("canvas"),fd),B=toBits(cv),bytes=job(B,copias||S.cfg.copias);
     if(S.cfg.modo==="sistema")await printSistema(cv,copias||S.cfg.copias);
     else if(S.cfg.modo==="rawbt"){let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));location.href="rawbt:base64,"+btoa(s)}
@@ -233,7 +233,7 @@ async function imprimir(fd,copias){if(ui.busy)return;if(!fd||!fd.lote){toast("Fa
     if(!fd.teste){S.hist.unshift({p:fd.p,n:fd.n,lote:fd.lote,t:Date.now()});S.hist=S.hist.slice(0,300);saveState()}
     ui.msg={c:"ok",t:`✓ Etiqueta enviada · lote ${fd.lote} · fardo ${g3(fd.n)}`};sOk()}
   catch(e){ui.msg={c:"bad",t:(e&&e.message)||"Falha ao imprimir"};sBad()}
-  finally{ui.busy=false;render();prnStatus()}}
+  finally{clearTimeout(solta);ui.busy=false;render();prnStatus()}}
 async function testePrint(){const d17="0"+"789000000"+"1"+"123456",fd={p:1,n:123456,lote:"1234",prod:"ETIQUETA DE TESTE · "+new Date().toLocaleString("pt-BR"),code:"00"+d17+saiCheck(d17),teste:true};await imprimir(fd,1)}
 
 // ======================================================================
@@ -255,7 +255,7 @@ function show(P,r){r=r||findFard(P);
   ui.fd={p:r.p,n:r.n,lote,prod:prodOfLote(lote),code,dben:rowDate(r.ri,3),dsai:rowDate(r.ri,4)};
   const ja=S.hist.find(h=>h.p===r.p&&h.n===r.n);
   if(!lote){ui.msg={c:"warn",t:"Fardo sem lote no pacote (aguardando HVI / lote não criado). Não imprime."};sWarn()}
-  else if(ja){ui.msg={c:"warn",t:`Já impresso neste aparelho em ${new Date(ja.t).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}.`};sWarn()}
+  else if(ja){ui.msg={c:"warn",t:`Já impresso neste aparelho em ${new Date(ja.t).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}. Pode imprimir de novo se precisar.`};sWarn()}
   else{ui.msg=null;sOk()}
   render();if(lote&&!ja&&S.cfg.auto)imprimir(ui.fd)}
 
@@ -276,7 +276,7 @@ function render(){
      <div class="g2"><div><span class="lab">PRENSA</span><b>${esc(f.p||"—")}</b></div><div><span class="lab">PRODUTOR / FAZENDA</span><b>${esc(f.prod||"—")}</b></div></div>
      <div class="sai"><span class="lab">CÓDIGO DE BARRAS SAI</span>${f.code?esc(f.code):"<span class='muted'>— (nº digitado; leia a etiqueta para ter o código)</span>"}</div>
      ${f.dsai?`<p class="hint" style="color:var(--bad);font-weight:700">Atenção: fardo já expedido em ${esc(f.dsai)}.</p>`:""}
-     <button class="btn prt big" type="button" id="bPrint" style="margin-top:12px"${!f.lote||ui.busy?" disabled":""}>${ui.busy?"Imprimindo…":"🖨 IMPRIMIR"}</button>
+     <button class="btn prt big" type="button" id="bPrint" style="margin-top:12px"${!f.lote||ui.busy?" disabled":""}>${ui.busy?"Imprimindo…":S.hist.some(h=>h.p===f.p&&h.n===f.n)?"🖨 IMPRIMIR DE NOVO":"🖨 IMPRIMIR"}</button>
      ${f.lote?`<canvas class="prev" id="cvPrev"></canvas><p class="hint">Prévia da etiqueta 100 × 75 mm.</p>`:""}</div>`
    :`<div class="card"><div class="msg idle">Leia a etiqueta SAI do fardo…</div><p class="hint">Use o gatilho do coletor, a câmera 📷 ou digite o nº do fardo e toque em OK.</p></div>`}
    <div class="card"><h2>Últimas impressões (${fmt(S.hist.length)})</h2><ul class="lst">${S.hist.slice(0,8).map(h=>`<li><b>Lote ${esc(h.lote)}</b><span>P${h.p} · ${g3(h.n)}</span><span class="r muted">${new Date(h.t).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</span></li>`).join("")||`<li class="muted">Nenhuma etiqueta impressa ainda.</li>`}</ul></div>`;
