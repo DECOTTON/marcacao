@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.21";
+const VER="1.0.22";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -351,12 +351,12 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
     catch(e){$("#pInfo").textContent="⚠ "+((e&&e.message)||"Falha ao enviar.");sBad()}};
   // diagnóstico ZPL: 4 etiquetas pequenas, cada uma testa um recurso (o nº que sair mostra o que a impressora aceita)
   $("#pZdg").onclick=async()=>{sv();if(c.modo==="sistema"){toast("Use a conexão Bluetooth direto ou RawBT para este teste.");return}
-    const sq="FF".repeat(6*48);const jobs=["^XA^MTD^FO20,30^A0N,60,60^FDTESTE 1 texto^FS^XZ\n",
-      "^XA^CI28^PW832^LL600^LH0,0^PON^FO20,30^A0N,60,60^FDTESTE 2 config^FS^PQ1^XZ\n",
-      "^XA^FO20,30^A0N,60,60^FDTESTE 3 codigos^FS^FO20,110^BY3,3,66^BCN,66,N,N,N^FD>;00078985333027290477^FS^FO560,100^BQN,2,6^FDMA,00078985333027290477^FS^FO20,220^GB300,60,60^FS^FO34,228^A0N,48,44^FR^FD729 047^FS^XZ\n",
-      `^XA^FO20,30^A0N,60,60^FDTESTE 4 imagem^FS^FO20,120^GFA,${6*48},${6*48},6,${sq}^FS^XZ\n`];
+    const jobs=["^XA~SD28^MD20^PR2^FO40,40^A0N,60,60^FDTESTE A escuro^FS^XZ\n",
+      "^XA^FO40,40^ADN,36,20^FDTESTE B fonte D^FS^XZ\n",
+      "^XA~SD28^MD20^FO40,40^GB500,140,140^FS^XZ\n",
+      "^XA~SD28^MD20^FO40,300^A0N,60,60^FDTESTE D meio^FS^FO40,500^A0N,60,60^FDTESTE D baixo^FS^XZ\n"];
     try{if(c.modo==="rawbt")await enviarBruto(enc(jobs.join("")));else for(const j of jobs){await PRN.enviar(enc(j));await new Promise(ok=>setTimeout(ok,600))}
-      $("#pInfo").innerHTML="Enviadas 4 etiquetas de teste. Me diga quais números saíram: <b>1</b> texto · <b>2</b> configuração · <b>3</b> código de barras, QR e caixa · <b>4</b> imagem.";sOk()}
+      $("#pInfo").innerHTML="Enviadas 4 etiquetas de teste. Me diga o que saiu: <b>A</b> texto escuro · <b>B</b> outra fonte · <b>C</b> retângulo preto (sem texto) · <b>D</b> texto no meio/embaixo.";sOk()}
     catch(e){$("#pInfo").textContent="⚠ "+((e&&e.message)||"Falha ao enviar.");sBad()}};
   // envia um texto curto em cada linguagem: a impressora imprime legível só a linha da linguagem que ela entende
   $("#pLing").onclick=async()=>{sv();if(c.modo==="sistema"){toast("Use a conexão Bluetooth direto ou RawBT para este teste.");return}
