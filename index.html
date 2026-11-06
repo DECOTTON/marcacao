@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.29";
+const VER="1.0.30";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -259,7 +259,7 @@ function printSistema(cv,copias){return new Promise(ok=>{const url=cv.toDataURL(
     .pg{position:relative;width:210mm;height:297mm;overflow:hidden;page-break-after:always}.pg:last-child{page-break-after:auto}.pg svg.ct{position:absolute;left:0;top:0;z-index:2}.pg img{position:absolute;display:block;image-rendering:pixelated}</style></head><body>${Array.from({length:n},()=>pg).join("")}</body></html>`);d.close();
   let foi=false;const go=()=>{if(foi)return;foi=true;ok();setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){}setTimeout(()=>f.remove(),60000)},50)};const im=d.images[0];if(im&&!im.complete){im.onload=go;im.onerror=go;setTimeout(go,2000)}else setTimeout(go,100)})}
 // Bluetooth BLE (Web Bluetooth): procura na impressora uma característica de escrita (serviços de "porta serial" comuns)
-const BLE_SVCS=["38eb4a80-c570-11e3-9507-0002a5d5c51b","0000180a-0000-1000-8000-00805f9b34fb","0000fff0-0000-1000-8000-00805f9b34fb","0000ffb0-0000-1000-8000-00805f9b34fb","000018f0-0000-1000-8000-00805f9b34fb","49535343-fe7d-4ae5-8fa9-9fafd205e455","6e400001-b5a3-f393-e0a9-e50e24dcca9e","0000ff00-0000-1000-8000-00805f9b34fb","0000ffe0-0000-1000-8000-00805f9b34fb","0000fee7-0000-1000-8000-00805f9b34fb","e7810a71-73ae-499d-8c15-faa9aef0c3f2","000018f1-0000-1000-8000-00805f9b34fb","0000ae30-0000-1000-8000-00805f9b34fb"];
+const BLE_SVCS=["38eb4a80-c570-11e3-9507-0002a5d5c51b","0000180a-0000-1000-8000-00805f9b34fb","0000fff0-0000-1000-8000-00805f9b34fb","0000ffb0-0000-1000-8000-00805f9b34fb","000018f0-0000-1000-8000-00805f9b34fb","49535343-fe7d-4ae5-8fa9-9fafd205e455","6e400001-b5a3-f393-e0a9-e50e24dcca9e","0000ff00-0000-1000-8000-00805f9b34fb","0000ffe0-0000-1000-8000-00805f9b34fb","0000fee7-0000-1000-8000-00805f9b34fb","e7810a71-73ae-499d-8c15-faa9aef0c3f2","000018f1-0000-1000-8000-00805f9b34fb","0000ae30-0000-1000-8000-00805f9b34fb","0000af30-0000-1000-8000-00805f9b34fb","0000fefb-0000-1000-8000-00805f9b34fb","2456e1b9-26e2-8f83-e744-f34f01e9d701","0003cdd0-0000-1000-8000-00805f9b0131","569a1101-b87f-490c-92cb-11ba5ea5167c","0783b03e-8535-b5a0-7140-a304d2495cb7","331a36f5-2459-45ea-9d95-6142f0c4b307","0000ffa0-0000-1000-8000-00805f9b34fb","0000ffc0-0000-1000-8000-00805f9b34fb","0000ffd0-0000-1000-8000-00805f9b34fb","0000fe59-0000-1000-8000-00805f9b34fb","00001101-0000-1000-8000-00805f9b34fb","0000feea-0000-1000-8000-00805f9b34fb","0000fd00-0000-1000-8000-00805f9b34fb"];
 const BLE={dev:null,ch:null,
   ok(){return !!(navigator.bluetooth&&navigator.bluetooth.requestDevice)},
   async escolher(){if(!this.ok())throw new Error("Este navegador não tem Bluetooth BLE.");
@@ -271,8 +271,12 @@ const BLE={dev:null,ch:null,
     let g=null,err=null;try{await PRN.fechar()}catch(e){} // libera a conexão clássica, se estiver aberta
     for(let t=0;t<4&&!g;t++){try{g=await this.dev.gatt.connect()}catch(e){err=e;await new Promise(ok=>setTimeout(ok,1200))}}
     if(!g)throw new Error("Não conectou por BLE ("+((err&&err.message)||"falha")+"). Feche outros apps que usam a impressora (ex.: Blockage), desligue e ligue a Sewoo e tente de novo.");let best=null;
-    for(const sv of await g.getPrimaryServices()){let cs=[];try{cs=await sv.getCharacteristics()}catch(e){}for(const c of cs){if(c.properties.writeWithoutResponse||c.properties.write){best=best||c;if(BLE_SVCS.includes(sv.uuid))best=c}}if(best&&BLE_SVCS.includes(sv.uuid))break}
-    if(!best)throw new Error("A impressora conectou por BLE, mas não tem canal de escrita conhecido.");this.ch=best;await new Promise(ok=>setTimeout(ok,600));return best},
+    const rel=[];let svs=[];try{svs=await g.getPrimaryServices()}catch(e){rel.push("sem serviços: "+e.message)}
+    for(const sv of svs){let cs=[];try{cs=await sv.getCharacteristics()}catch(e){}
+      rel.push(sv.uuid.slice(0,8)+": "+(cs.map(c=>c.uuid.slice(0,8)+"("+["read","write","writeWithoutResponse","notify","indicate"].filter(k=>c.properties[k]).map(k=>({read:"r",write:"w",writeWithoutResponse:"W",notify:"n",indicate:"i"})[k]).join("")+")").join(" ")||"—"));
+      if(sv.uuid.startsWith("0000180a"))for(const c of cs){if(["00002a24","00002a29","00002a26","00002a27"].some(u=>c.uuid.startsWith(u)))try{const v=await c.readValue();rel.push("  "+c.uuid.slice(4,8)+"="+new TextDecoder().decode(v))}catch(e){}}
+      for(const c of cs){if(c.properties.writeWithoutResponse||c.properties.write){best=best||c;if(BLE_SVCS.includes(sv.uuid))best=c}}if(best&&BLE_SVCS.includes(sv.uuid))break}
+    if(!best){BLE.rel=rel.join("\n");throw new Error("A impressora conectou por BLE, mas não tem canal de escrita conhecido. Tire um print desta tela e me envie:\n"+BLE.rel)}this.ch=best;await new Promise(ok=>setTimeout(ok,600));return best},
   async enviar(bytes){const c=await this.abrir(),ck=Math.max(20,+S.cfg.bleBloco||180);
     for(let i=0;i<bytes.length;i+=ck){const part=bytes.slice(i,i+ck);if(c.properties.writeWithoutResponse&&c.writeValueWithoutResponse)await c.writeValueWithoutResponse(part);else await c.writeValue(part);await new Promise(ok=>setTimeout(ok,8))}}};
 async function enviarBruto(bytes){if(S.cfg.modo==="ble")return BLE.enviar(bytes);if(S.cfg.modo==="rawbt"){let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));location.href="rawbt:base64,"+btoa(s);return}await PRN.enviar(bytes)}
@@ -323,7 +327,7 @@ function render(){
     <ol><li>No app principal (com internet): <b>Fardinhos a emblocar › 📟 Coletor › Baixar pacote para o coletor</b> (o mesmo pacote do app Emblocamento).</li><li>Aqui: toque em <b>Carregar pacote</b> e escolha o arquivo <b>Pacote para o coletor - …</b>.</li><li>Em <b>☰ Menu › Impressora</b>, escolha a Sewoo LK-P400 (pareada no Bluetooth do coletor).</li></ol>
     <button class="btn pri big" type="button" id="bPac">📂 Carregar pacote</button></div>`;$("#bPac").onclick=()=>$("#fPac").click();return}
   const f=ui.fd,m=ui.msg;
-  a.innerHTML=`${m?`<div class="msg ${m.c}">${esc(m.t)}</div>`:""}
+  a.innerHTML=`${m?`<div class="msg ${m.c}" style="white-space:pre-line;word-break:break-all">${esc(m.t)}</div>`:""}
    ${f?`<div class="card fd">
      <div class="flote"><div><span class="lab">LOTE</span><span class="lote">${esc(f.lote||"—")}</span></div><div><span class="lab">FARDO</span><span class="fardo">${esc(g3(f.n))}</span></div></div>
      <div class="g2"><div><span class="lab">PRENSA</span><b>${esc(f.p||"—")}</b></div><div><span class="lab">PRODUTOR / FAZENDA</span><b>${esc(f.prod||"—")}</b></div></div>
