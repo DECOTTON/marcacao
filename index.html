@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.33";
+const VER="1.0.34";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -205,26 +205,26 @@ function job(B,copias){const L=S.cfg.lang,dx=Math.round(+S.cfg.dx||0),dy=Math.ro
 // ZPL com comandos nativos da impressora (texto, código de barras, QR, caixas): poucos dados e
 // não depende de gráfico. Só os logos vão como imagem pequena (^GFA).
 // largura de cada caractere na fonte 0 da impressora (proporção da largura pedida); medido na Sewoo
-const ZF0={dig:.414,up:.46,low:.40,oth:.30},ZCAP=.748;
-async function zplNativo(fd,copias){const q=Math.max(1,Math.min(9,+copias||1)),dx=Math.max(0,Math.round(+S.cfg.dx||0)),dy=Math.max(0,Math.round(+S.cfg.dy||0)),M=14;
-  const zc=t=>String(t??"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\x20-\x7E]/g," ").replace(/[\^~]/g," ");const P=[`^XA~SD28^MD20^PW${LW}^LL${LH}${dx||dy?`^LH${dx},${dy}`:""}\n`];
+const ZF0={dig:.414,up:.58,low:.50,oth:.38},ZCAP=.748;
+async function zplNativo(fd,copias){const q=Math.max(1,Math.min(9,+copias||1)),ox=Math.round(+S.cfg.dx||0),oy=Math.round(+S.cfg.dy||0),X=v=>Math.max(0,Math.round(v+ox)),Y=v=>Math.max(0,Math.round(v+oy)),M=14;
+  const zc=t=>String(t??"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\x20-\x7E]/g," ").replace(/[\^~]/g," ");const P=[`^XA~SD28^MD20^PW${LW}^LL${LH}\n`];
   // desenha a etiqueta no canvas (mesmo layout da prévia) e registra posições de textos, caixas, código de barras e QR
   const rec={t:[],r:[],bc:null,qr:null},cv=document.createElement("canvas");await drawLabel(cv,fd,rec);const ctx=cv.getContext("2d");
   // logos (imagem pequena)
   if(S.cfg.logos&&S.cfg.zlogo!==false&&LOGOS.length){const ims=(await Promise.all(LOGOS.map(loadImg))).filter(Boolean);const lc=document.createElement("canvas");lc.width=LW;lc.height=74;const lx=lc.getContext("2d");lx.fillStyle="#fff";lx.fillRect(0,0,LW,74);
     if(ims[0])drawLogo(lx,ims[0],M,M,230,60,false);if(ims[1])drawLogo(lx,ims[1],LW-M-230,M,230,60,true);const B=toBits(lc);
-    for(const s of [...bandsX(B,0,LW/16),...bandsX(B,LW/16,B.wb)]){let hx="";for(let y=s.y0;y<s.y0+s.h;y++)for(let x=s.x0;x<s.x0+s.n;x++)hx+=hex2(B.b[y*B.wb+x]);P.push(`^FO${s.x0*8},${s.y0}^GFA,${s.n*s.h},${s.n*s.h},${s.n},${hx}^FS\n`)}}
+    for(const s of [...bandsX(B,0,LW/16),...bandsX(B,LW/16,B.wb)]){let hx="";for(let y=s.y0;y<s.y0+s.h;y++)for(let x=s.x0;x<s.x0+s.n;x++)hx+=hex2(B.b[y*B.wb+x]);P.push(`^FO${X(s.x0*8)},${Y(s.y0)}^GFA,${s.n*s.h},${s.n*s.h},${s.n},${hx}^FS\n`)}}
   // caixas e linhas
-  for(const[x,y,w,h]of rec.r)P.push(`^FO${Math.round(x)},${Math.round(y)}^GB${Math.round(w)},${Math.round(h)},${Math.round(Math.min(w,h))}^FS\n`);
+  for(const[x,y,w,h]of rec.r)P.push(`^FO${X(x)},${Y(y)}^GB${Math.round(w)},${Math.round(h)},${Math.round(Math.min(w,h))}^FS\n`);
   // textos: cada caractere na mesma posição e largura da prévia (a fonte da impressora é diferente, assim não "encolhe" nem invade o QR)
   for(const it of rec.t){ctx.font=it.font;const mH=ctx.measureText("H"),cap=mH.actualBoundingBoxAscent||parseFloat(it.font.match(/(\d+)px/)[1])*.72,zh=Math.max(10,Math.round(cap/ZCAP));
     for(let i=0;i<it.t.length;i++){const ch=zc(it.t[i]);if(ch===" ")continue;const x=it.x+ctx.measureText(it.t.slice(0,i)).width,cw=ctx.measureText(it.t[i]).width,
       f=/\d/.test(ch)?ZF0.dig:/[A-Z]/.test(ch)?ZF0.up:/[a-z]/.test(ch)?ZF0.low:ZF0.oth,zw=Math.max(8,Math.round(cw/f));
-      P.push(`^FT${Math.round(x)},${Math.round(it.y)}^A0N,${zh},${zw}${it.inv?"^FR":""}^FD${ch}^FS`)}P.push("\n")}
+      P.push(`^FT${X(x)},${Y(it.y)}^A0N,${zh},${zw}${it.inv?"^FR":""}^FD${ch}^FS`)}P.push("\n")}
   // código de barras SAI (Code 128 subconjunto C) e QR, nas mesmas posições da prévia
   const code=fd.code||"";
-  if(rec.bc&&/^\d{20}$/.test(code))P.push(`^FO${rec.bc.x},${rec.bc.y}^BY${rec.bc.mw},3,${rec.bc.h}^BCN,${rec.bc.h},N,N,N^FD>;${code}^FS\n`);
-  if(rec.qr&&code)P.push(`^FO${rec.qr.x},${rec.qr.y}^BQN,2,${rec.qr.m}^FDMA,${code}^FS\n`);
+  if(rec.bc&&/^\d{20}$/.test(code))P.push(`^FO${X(rec.bc.x)},${Y(rec.bc.y)}^BY${rec.bc.mw},3,${rec.bc.h}^BCN,${rec.bc.h},N,N,N^FD>;${code}^FS\n`);
+  if(rec.qr&&code)P.push(`^FO${X(rec.qr.x)},${Y(rec.qr.y)}^BQN,2,${rec.qr.m}^FDMA,${code}^FS\n`);
   P.push(`^PQ${q}^XZ\n`);return enc(P.join(""))}
 
 // ======================================================================
@@ -373,7 +373,7 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   <p class="hint" style="margin-top:0">Sewoo LK-P400 · etiqueta 105 × 75 mm. Antes, pareie a impressora no Bluetooth do coletor (Configurações do Android › Bluetooth).</p>
   <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="ble"${c.modo==="ble"?" selected":""}>Bluetooth BLE (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT (recomendado p/ Sewoo)</option><option value="sistema"${c.modo==="sistema"?" selected":""}>Impressora do sistema (Wi-Fi/rede · teste)</option></select></label>
    <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="zplimg"${c.lang==="zplimg"?" selected":""}>ZPL (imagem)</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option><option value="cpcleg"${c.lang==="cpcleg"?" selected":""}>CPCL (gráfico hex · EG)</option></select></label>
-   <label><span>Deslocar → (pontos)</span><input type="number" id="pDx" value="${+c.dx||0}" step="8"></label><label><span>Deslocar ↓ (pontos)</span><input type="number" id="pDy" value="${+c.dy||0}" step="8"></label>
+   <label><span>Deslocar ↔ (pontos; negativo = esquerda)</span><input type="number" id="pDx" value="${+c.dx||0}" step="8"></label><label><span>Deslocar ↕ (pontos; negativo = cima)</span><input type="number" id="pDy" value="${+c.dy||0}" step="8"></label>
    <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label>
    <label><span>Espera ao conectar (ms)</span><input type="number" id="pEsp" value="${+c.espera||1800}" step="500" min="0"></label></div>
   <label class="opt"><input type="checkbox" id="pAuto"${c.auto?" checked":""}> Imprimir sozinho logo após ler o fardo</label>
