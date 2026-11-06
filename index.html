@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.32";
+const VER="1.0.33";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -140,33 +140,41 @@ function drawLogo(ctx,im,x,y,maxW,maxH,alignR){const k=Math.min(maxW/im.width,ma
   for(let i=0;i<w*h;i++){const a=D[i*4+3]/255;L[i]=(D[i*4]*.299+D[i*4+1]*.587+D[i*4+2]*.114)*a+255*(1-a)}
   for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){const i=yy*w+xx,o=L[i],nv=o<150?0:255,e=o-nv;L[i]=nv;if(xx+1<w)L[i+1]+=e*7/16;if(yy+1<h){if(xx>0)L[i+w-1]+=e*3/16;L[i+w]+=e*5/16;if(xx+1<w)L[i+w+1]+=e/16}}
   for(let i=0;i<w*h;i++){const v=L[i]<128?0:255;D[i*4]=D[i*4+1]=D[i*4+2]=v;D[i*4+3]=255}g.putImageData(id,0,0);ctx.drawImage(c,x0,y0)}
-async function drawLabel(cv,fd){cv.width=LW;cv.height=LH;const ctx=cv.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,LW,LH);ctx.fillStyle="#000";ctx.textBaseline="alphabetic";
+async function drawLabel(cv,fd,rec){cv.width=LW;cv.height=LH;const ctx=cv.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,LW,LH);ctx.fillStyle="#000";ctx.textBaseline="alphabetic";ctx.textAlign="left";
+  // T = escreve texto (alinhado à esquerda) e registra para o ZPL; c=true centraliza em x
+  const T=(t,x,y,c,inv)=>{t=String(t);if(c)x=x-ctx.measureText(t).width/2;ctx.fillText(t,x,y);if(rec)rec.t.push({t,x,y,font:ctx.font,inv:!!inv})};
   const M=14;let y=M;
   // linha do topo: logos nos cantos e a palavra LOTE no meio
   const TH=60;
   if(S.cfg.logos&&LOGOS.length){const ims=(await Promise.all(LOGOS.map(loadImg))).filter(Boolean);if(ims[0])drawLogo(ctx,ims[0],M,y,230,TH,false);if(ims[1])drawLogo(ctx,ims[1],LW-M-230,y,230,TH,true)}
-  ctx.font="800 36px system-ui,Roboto,sans-serif";ctx.textAlign="center";ctx.fillText("LOTE",LW/2,y+TH/2+13);ctx.textAlign="left";y+=TH+8;
+  ctx.font="800 36px system-ui,Roboto,sans-serif";T("LOTE",LW/2,y+TH/2+13,true);y+=TH+8;
   // LOTE em fonte bem grande, ocupando a largura (para o operador da pá carregadeira)
   const lt=String(fd.lote||"—"),px=fitText(ctx,lt,"900 {px}px system-ui,Roboto,sans-serif",LW-2*M,340,90);ctx.font=`900 ${px}px system-ui,Roboto,sans-serif`;
-  const mt=ctx.measureText(lt),asc=Math.round(mt.actualBoundingBoxAscent||px*.73);ctx.textAlign="center";ctx.fillText(lt,LW/2,y+asc);ctx.textAlign="left";y+=asc+14;
-  ctx.fillRect(M,y,LW-2*M,4);y+=14;
+  const mt=ctx.measureText(lt),asc=Math.round(mt.actualBoundingBoxAscent||px*.73);T(lt,LW/2,y+asc,true);y+=asc+14;
+  ctx.fillRect(M,y,LW-2*M,4);if(rec)rec.r.push([M,y,LW-2*M,4]);y+=14;
   // FARDO em destaque (fundo preto, número branco) · prensa e produtor ao lado
-  ctx.font="800 26px system-ui,Roboto,sans-serif";ctx.fillText("FARDO",M,y+48);
-  const fn=g3(fd.n);ctx.font="900 66px ui-monospace,Roboto Mono,monospace";const fw=ctx.measureText(fn).width+36;ctx.fillRect(M+100,y,fw,78);ctx.fillStyle="#fff";ctx.fillText(fn,M+118,y+62);ctx.fillStyle="#000";
-  const yRow=y,xr=M+100+fw+20,wr=LW-M-xr-150;ctx.font="700 26px system-ui,Roboto,sans-serif";ctx.fillText(`Prensa ${fd.p||"—"}`,xr,y+28);let xTxt=xr+ctx.measureText(`Prensa ${fd.p||"—"}`).width;
-  const pr=String(fd.prod||"").toUpperCase()||"—";ctx.font=`800 ${fitText(ctx,pr,"800 {px}px system-ui,Roboto,sans-serif",wr,34,18)}px system-ui,Roboto,sans-serif`;ctx.fillText(pr,xr,y+70);xTxt=Math.max(xTxt,xr+ctx.measureText(pr).width);y+=90;
-  // código de barras SAI + QR pequenos (para identificar o fardo se a etiqueta SAI se perder)
+  ctx.font="800 26px system-ui,Roboto,sans-serif";T("FARDO",M,y+48);
+  const fn=g3(fd.n);ctx.font="900 66px ui-monospace,Roboto Mono,monospace";const fw=Math.round(ctx.measureText(fn).width+36);ctx.fillRect(M+100,y,fw,78);if(rec)rec.r.push([M+100,y,fw,78]);ctx.fillStyle="#fff";T(fn,M+118,y+62,false,true);ctx.fillStyle="#000";
+  const yRow=y,xr=M+100+fw+20;
+  // código de barras SAI + QR (para identificar o fardo se a etiqueta SAI se perder)
   const code=fd.code||"",qs=104,yb=LH-M-qs;
-  // QR maior: base alinhada com a base do texto do código de barras, topo até logo abaixo da faixa do fardo
+  // QR de tamanho fixo à direita: base alinhada com a base do texto do código de barras
   const bh=66,tBase=yb+bh+28;let qW=0;
-  if(code&&typeof qrcode==="function"){try{const q=qrcode(0,"M");q.addData(code);q.make();const n=q.getModuleCount(),lim=Math.min(tBase-yRow,LW-M-(xTxt+18),180),m=Math.max(2,Math.floor(lim/n));qW=n*m;const q0=LW-M-qW,qy=tBase-qW;
-    for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))ctx.fillRect(q0+m*c,qy+m*r,m,m)}catch(e){}}
+  if(code&&typeof qrcode==="function"){try{const q=qrcode(0,"M");q.addData(code,/^\d+$/.test(code)?"Numeric":"Byte");q.make();const n=q.getModuleCount(),lim=Math.min(tBase-yRow,180),m=Math.max(2,Math.min(10,Math.floor(lim/n)));qW=n*m;const q0=LW-M-qW,qy=tBase-qW;
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))ctx.fillRect(q0+m*c,qy+m*r,m,m);if(rec)rec.qr={x:q0,y:qy,m}}catch(e){}}
+  // prensa e produtor no espaço entre a faixa do fardo e o QR (nome longo: diminui e, se precisar, quebra em 2 linhas)
+  const wr=LW-M-xr-(qW||150)-16;ctx.font="700 26px system-ui,Roboto,sans-serif";T(`Prensa ${fd.p||"—"}`,xr,y+28);
+  const pr=String(fd.prod||"").toUpperCase().trim()||"—",PF="800 {px}px system-ui,Roboto,sans-serif";let pp=fitText(ctx,pr,PF,wr,34,22);ctx.font=PF.replace("{px}",pp);
+  if(ctx.measureText(pr).width<=wr)T(pr,xr,y+70);
+  else{const ws=pr.split(/\s+/);let best=[pr,""],bd=1e9;for(let i=1;i<ws.length;i++){const a=ws.slice(0,i).join(" "),b=ws.slice(i).join(" "),d=Math.abs(a.length-b.length);if(d<bd){bd=d;best=[a,b]}}
+    pp=Math.min(fitText(ctx,best[0],PF,wr,26,14),best[1]?fitText(ctx,best[1],PF,wr,26,14):26);ctx.font=PF.replace("{px}",pp);T(best[0],xr,y+60);if(best[1])T(best[1],xr,y+62+pp)}
+  y+=90;
   const mods=code?c128C(code):null;
-  if(mods){const mw=Math.max(2,Math.min(3,Math.floor((LW-2*M-Math.max(qs,qW)-30)/(mods.length+20)))),bw=mods.length*mw,bx=M+10*mw;for(let i=0;i<mods.length;i++)if(mods[i])ctx.fillRect(bx+i*mw,yb,mw,bh);
+  if(mods){const mw=Math.max(2,Math.min(3,Math.floor((LW-2*M-Math.max(qs,qW)-30)/(mods.length+20)))),bx=M+10*mw;for(let i=0;i<mods.length;i++)if(mods[i])ctx.fillRect(bx+i*mw,yb,mw,bh);if(rec)rec.bc={x:bx,y:yb,mw,h:bh};
     // texto do código: nº do fardo (6 dígitos antes do verificador) maior que o resto
     const seg=[[`(${code.slice(0,2)}) ${code.slice(2,13)}`,"600 22px"],[code.slice(13,19),"900 32px"],[code.slice(19),"600 22px"]];let tx=bx;
-    for(const[t,f]of seg){ctx.font=`${f} ui-monospace,Roboto Mono,monospace`;ctx.fillText(t,tx,yb+bh+28);tx+=ctx.measureText(t).width+2}}
-  else{ctx.font="600 22px system-ui,Roboto,sans-serif";ctx.fillText(code?`SAI ${code}`:"Código SAI não disponível (fardo digitado)",M,LH-M-10)}
+    for(const[t,f]of seg){ctx.font=`${f} ui-monospace,Roboto Mono,monospace`;T(t,tx,tBase);tx+=ctx.measureText(t).width+2}}
+  else{ctx.font="600 22px system-ui,Roboto,sans-serif";T(code?`SAI ${code}`:"Código SAI não disponível (fardo digitado)",M,LH-M-10)}
   return cv}
 // canvas → bits (1 = ponto preto), deslocado pelos ajustes dx/dy
 function toBits(cv){const w=cv.width,h=cv.height,D=cv.getContext("2d").getImageData(0,0,w,h).data,wb=Math.ceil(w/8),b=new Uint8Array(wb*h);
@@ -196,26 +204,27 @@ function job(B,copias){const L=S.cfg.lang,dx=Math.round(+S.cfg.dx||0),dy=Math.ro
 
 // ZPL com comandos nativos da impressora (texto, código de barras, QR, caixas): poucos dados e
 // não depende de gráfico. Só os logos vão como imagem pequena (^GFA).
+// largura de cada caractere na fonte 0 da impressora (proporção da largura pedida); medido na Sewoo
+const ZF0={dig:.414,up:.46,low:.40,oth:.30},ZCAP=.748;
 async function zplNativo(fd,copias){const q=Math.max(1,Math.min(9,+copias||1)),dx=Math.max(0,Math.round(+S.cfg.dx||0)),dy=Math.max(0,Math.round(+S.cfg.dy||0)),M=14;
-  const zt=t=>String(t??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\x20-\x7E]/g," ").replace(/[\^~]/g," ");const P=[`^XA~SD28^MD20^PW${LW}^LL${LH}${dx||dy?`^LH${dx},${dy}`:""}\n`];
+  const zc=t=>String(t??"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\x20-\x7E]/g," ").replace(/[\^~]/g," ");const P=[`^XA~SD28^MD20^PW${LW}^LL${LH}${dx||dy?`^LH${dx},${dy}`:""}\n`];
+  // desenha a etiqueta no canvas (mesmo layout da prévia) e registra posições de textos, caixas, código de barras e QR
+  const rec={t:[],r:[],bc:null,qr:null},cv=document.createElement("canvas");await drawLabel(cv,fd,rec);const ctx=cv.getContext("2d");
   // logos (imagem pequena)
-  if(S.cfg.logos&&S.cfg.zlogo!==false&&LOGOS.length){const ims=(await Promise.all(LOGOS.map(loadImg))).filter(Boolean);const cv=document.createElement("canvas");cv.width=LW;cv.height=74;const ctx=cv.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,LW,74);
-    if(ims[0])drawLogo(ctx,ims[0],M,M,230,60,false);if(ims[1])drawLogo(ctx,ims[1],LW-M-230,M,230,60,true);const B=toBits(cv);
+  if(S.cfg.logos&&S.cfg.zlogo!==false&&LOGOS.length){const ims=(await Promise.all(LOGOS.map(loadImg))).filter(Boolean);const lc=document.createElement("canvas");lc.width=LW;lc.height=74;const lx=lc.getContext("2d");lx.fillStyle="#fff";lx.fillRect(0,0,LW,74);
+    if(ims[0])drawLogo(lx,ims[0],M,M,230,60,false);if(ims[1])drawLogo(lx,ims[1],LW-M-230,M,230,60,true);const B=toBits(lc);
     for(const s of [...bandsX(B,0,LW/16),...bandsX(B,LW/16,B.wb)]){let hx="";for(let y=s.y0;y<s.y0+s.h;y++)for(let x=s.x0;x<s.x0+s.n;x++)hx+=hex2(B.b[y*B.wb+x]);P.push(`^FO${s.x0*8},${s.y0}^GFA,${s.n*s.h},${s.n*s.h},${s.n},${hx}^FS\n`)}}
-  P.push(`^FO0,26^A0N,40,40^FB${LW},1,0,C^FDLOTE^FS\n`);
-  // nº do lote: altura fixa e largura ajustada para caber
-  const lt=zt(fd.lote||"—"),h=290,w=Math.min(290,Math.floor((LW-2*M)/(Math.max(1,lt.length)*0.62)));
-  P.push(`^FO0,84^A0N,${h},${w}^FB${LW},1,0,C^FD${lt}^FS\n^FO${M},350^GB${LW-2*M},4,4^FS\n`);
-  // FARDO em destaque (caixa preta com texto invertido), prensa e produtor
-  const fn=g3(fd.n),bw=Math.round(fn.length*37+36);
-  P.push(`^FO${M},392^A0N,28,28^FDFARDO^FS\n^FO${M+100},368^GB${bw},78,78^FS\n^FO${M+118},376^A0N,70,62^FR^FD${zt(fn)}^FS\n`);
-  const xr=M+100+bw+20;P.push(`^FO${xr},372^A0N,28,28^FDPrensa ${zt(fd.p||"—")}^FS\n^FO${xr},406^A0N,36,34^FD${zt(String(fd.prod||"—").toUpperCase()).slice(0,22)}^FS\n`);
-  // código de barras SAI (Code 128 subconjunto C) com o texto embaixo, nº do fardo maior; QR à direita alinhado na base
+  // caixas e linhas
+  for(const[x,y,w,h]of rec.r)P.push(`^FO${Math.round(x)},${Math.round(y)}^GB${Math.round(w)},${Math.round(h)},${Math.round(Math.min(w,h))}^FS\n`);
+  // textos: cada caractere na mesma posição e largura da prévia (a fonte da impressora é diferente, assim não "encolhe" nem invade o QR)
+  for(const it of rec.t){ctx.font=it.font;const mH=ctx.measureText("H"),cap=mH.actualBoundingBoxAscent||parseFloat(it.font.match(/(\d+)px/)[1])*.72,zh=Math.max(10,Math.round(cap/ZCAP));
+    for(let i=0;i<it.t.length;i++){const ch=zc(it.t[i]);if(ch===" ")continue;const x=it.x+ctx.measureText(it.t.slice(0,i)).width,cw=ctx.measureText(it.t[i]).width,
+      f=/\d/.test(ch)?ZF0.dig:/[A-Z]/.test(ch)?ZF0.up:/[a-z]/.test(ch)?ZF0.low:ZF0.oth,zw=Math.max(8,Math.round(cw/f));
+      P.push(`^FT${Math.round(x)},${Math.round(it.y)}^A0N,${zh},${zw}${it.inv?"^FR":""}^FD${ch}^FS`)}P.push("\n")}
+  // código de barras SAI (Code 128 subconjunto C) e QR, nas mesmas posições da prévia
   const code=fd.code||"";
-  if(/^\d{20}$/.test(code)){P.push(`^FO${M+10},482^BY3,3,66^BCN,66,N,N,N^FD>;${code}^FS\n`);
-    P.push(`^FO${M+10},556^A0N,24,22^FD(${code.slice(0,2)}) ${code.slice(2,13)}^FS\n^FO${M+10+Math.round(16*12.4)},550^A0N,32,30^FD${code.slice(13,19)}^FS\n^FO${M+10+Math.round(16*12.4+6*16.5)},556^A0N,24,22^FD${code.slice(19)}^FS\n`);
-    P.push(`^FO${LW-M-170},400^BQN,2,7^FDMA,${code}^FS\n`)}
-  else P.push(`^FO${M},556^A0N,24,22^FDCodigo SAI nao disponivel (fardo digitado)^FS\n`);
+  if(rec.bc&&/^\d{20}$/.test(code))P.push(`^FO${rec.bc.x},${rec.bc.y}^BY${rec.bc.mw},3,${rec.bc.h}^BCN,${rec.bc.h},N,N,N^FD>;${code}^FS\n`);
+  if(rec.qr&&code)P.push(`^FO${rec.qr.x},${rec.qr.y}^BQN,2,${rec.qr.m}^FDMA,${code}^FS\n`);
   P.push(`^PQ${q}^XZ\n`);return enc(P.join(""))}
 
 // ======================================================================
