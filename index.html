@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.38";
+const VER="1.0.39";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -115,6 +115,8 @@ function scanParse(txt){
   for(let i=0;i+20<=d.length;i++){if(d[i]!=="0"||d[i+1]!=="0")continue;const p=parseSAI(d.slice(i,i+20));if(p&&p.sai){if(p.ok)return p;bad=bad||p}}
   if(bad)return{...bad,badCheck:true};if(d&&d.length<=7)return{num:+d,prensa:null,ok:true,sai:false};return null}
 // prefixo SAI da algodoeira (00 + extensão + empresa) aprendido das etiquetas lidas: monta o código de fardo digitado à mão
+// prefixo: o do pacote (Configurações › Parâmetros do app principal) tem prioridade; senão o aprendido na leitura
+function prefSAI(){const p=PAC&&PAC.pref;return /^00\d{10}$/.test(String(p||""))?String(p):(S.pref||"")}
 function saiFrom(pref,p,n){if(!pref||!p)return"";const d17=(pref.slice(2)+String(p)+String(n).padStart(6,"0"));if(d17.length!==17)return"";return "00"+d17+saiCheck(d17)}
 
 // ---------- sons e vibração ----------
@@ -327,10 +329,10 @@ function onRead(raw){if(!PAC){toast("Carregue o pacote primeiro.");return}const 
   show(P,r)}
 function show(P,r){r=r||findFard(P);
   if(!r){ui.fd={p:P.prensa,n:P.num,lote:"",prod:"",code:P.code||"",nf:true};ui.msg={c:"bad",t:`Fardo ${g3(P.num)}${P.prensa?` (prensa ${P.prensa})`:""} não está no pacote. Gere um pacote novo no app principal.`};sBad();render();return}
-  const lote=rowLote(r.ri),code=P.code||saiFrom(S.pref,r.p,r.n);
+  const lote=rowLote(r.ri),code=P.code||saiFrom(prefSAI(),r.p,r.n);
   ui.fd={p:r.p,n:r.n,lote,prod:prodOfLote(lote),code,dben:rowDate(r.ri,3),dsai:rowDate(r.ri,4)};
   if(!lote){ui.msg={c:"warn",t:"Fardo sem lote no pacote (aguardando HVI / lote não criado). Não imprime."};sWarn()}
-  else if(!code){ui.msg={c:"warn",t:"Sem código de barras e QR: o app ainda não conhece o prefixo SAI da algodoeira. Leia com o coletor a etiqueta SAI de qualquer fardo uma vez (o app aprende e passa a gerar sozinho) ou informe o prefixo em ☰ Menu."};sWarn()}
+  else if(!code){ui.msg={c:"warn",t:"Sem código de barras e QR: o app ainda não conhece o prefixo SAI da algodoeira. Cadastre o prefixo em Configurações › Parâmetros do app principal e gere um pacote novo, ou leia com o coletor a etiqueta SAI de qualquer fardo uma vez (o app aprende)."};sWarn()}
   else{ui.msg=null;sOk()}
   render();if(lote&&S.cfg.auto)imprimir(ui.fd)}
 
@@ -379,7 +381,7 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="ble"${c.modo==="ble"?" selected":""}>Bluetooth BLE (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT (recomendado p/ Sewoo)</option><option value="sistema"${c.modo==="sistema"?" selected":""}>Impressora do sistema (Wi-Fi/rede · teste)</option></select></label>
    <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="zplimg"${c.lang==="zplimg"?" selected":""}>ZPL (imagem)</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option><option value="cpcleg"${c.lang==="cpcleg"?" selected":""}>CPCL (gráfico hex · EG)</option></select></label>
    <label><span>Deslocar ↔ (pontos; negativo = esquerda)</span><input type="number" id="pDx" value="${+c.dx||0}" step="8"></label><label><span>Deslocar ↕ (pontos; negativo = cima)</span><input type="number" id="pDy" value="${+c.dy||0}" step="8"></label>
-   <label><span>Prefixo SAI (aprendido na 1ª leitura)</span><input type="text" id="pPref" inputmode="numeric" value="${esc(S.pref||"")}" placeholder="ex.: 000789853330" maxlength="12"></label>
+   <label><span>Prefixo SAI ${PAC&&/^00\d{10}$/.test(String(PAC.pref||""))?"(vem do pacote)":"(aprendido na 1ª leitura)"}</span><input type="text" id="pPref" inputmode="numeric" value="${esc(prefSAI())}"${PAC&&/^00\d{10}$/.test(String(PAC.pref||""))?" disabled":""} placeholder="ex.: 000789853330" maxlength="12"></label>
    <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label>
    <label><span>Espera ao conectar (ms)</span><input type="number" id="pEsp" value="${+c.espera||1800}" step="500" min="0"></label></div>
   <label class="opt"><input type="checkbox" id="pAuto"${c.auto?" checked":""}> Imprimir sozinho logo após ler o fardo</label>
