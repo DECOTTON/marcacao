@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.35";
+const VER="1.0.36";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -220,9 +220,11 @@ async function zplNativo(fd,copias){const q=Math.max(1,Math.min(9,+copias||1)),o
   for(const[x,y,w,h]of rec.r)P.push(`^FO${X(x)},${Y(y)}^GB${Math.round(w)},${Math.round(h)},${Math.round(Math.min(w,h))}^FS\n`);
   // textos: cada caractere na mesma posição e largura da prévia (a fonte da impressora é diferente, assim não "encolhe" nem invade o QR)
   for(const it of rec.t){ctx.font=it.font;const mH=ctx.measureText("H"),cap=mH.actualBoundingBoxAscent||parseFloat(it.font.match(/(\d+)px/)[1])*.72,zh=Math.max(10,Math.round(cap/ZCAP));
-    for(let i=0;i<it.t.length;i++){const ch=zc(it.t[i]);if(ch===" ")continue;const x=it.x+ctx.measureText(it.t.slice(0,i)).width,cw=ctx.measureText(it.t[i]).width,
-      f=/\d/.test(ch)?ZF0.dig:/[A-Z]/.test(ch)?ZF0.up:/[a-z]/.test(ch)?ZF0.low:ZF0.oth,zw=Math.max(8,Math.round(cw/f));
-      P.push(`^FT${X(x)},${Y(it.y)}^A0N,${zh},${zw}${it.inv?"^FR":""}^FD${ch}^FS`)}P.push("\n")}
+    // largura única para o texto todo (traço igual em todas as letras); cada letra fica na posição da prévia
+    const fOf=ch=>ch===" "?.25:/\d/.test(ch)?ZF0.dig:/[A-Z]/.test(ch)?ZF0.up:/[a-z]/.test(ch)?ZF0.low:ZF0.oth;
+    let sf=0;for(const c of it.t)sf+=fOf(zc(c));const zw=Math.max(8,Math.round(ctx.measureText(it.t).width/Math.max(.1,sf)));
+    for(let i=0;i<it.t.length;i++){const ch=zc(it.t[i]);if(ch===" ")continue;const cw=ctx.measureText(it.t[i]).width,x=it.x+ctx.measureText(it.t.slice(0,i)).width,zwc=/\d/.test(ch)?Math.max(8,Math.round(cw/ZF0.dig)):zw;
+      P.push(`^FT${X(x)},${Y(it.y)}^A0N,${zh},${zwc}${it.inv?"^FR":""}^FD${ch}^FS`)}P.push("\n")}
   // código de barras SAI (Code 128 subconjunto C) e QR, nas mesmas posições da prévia
   const code=fd.code||"";
   if(rec.bc&&/^\d{20}$/.test(code))P.push(`^FO${X(rec.bc.x)},${Y(rec.bc.y)}^BY${rec.bc.mw},3,${rec.bc.h}^BCN,${rec.bc.h},N,N,N^FD>;${code}^FS\n`);
