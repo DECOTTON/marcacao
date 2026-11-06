@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.26";
+const VER="1.0.27";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -176,6 +176,8 @@ const hex2=v=>v.toString(16).padStart(2,"0").toUpperCase();
 function bands(B,step){const out=[];for(let y0=0;y0<B.h;y0+=step){const h=Math.min(step,B.h-y0);let x0=B.wb,x1=-1;for(let y=y0;y<y0+h;y++)for(let x=0;x<B.wb;x++)if(B.b[y*B.wb+x]){if(x<x0)x0=x;if(x>x1)x1=x}
   if(x1>=0)out.push({y0,h,x0,n:x1-x0+1})}return out}
 const enc=s=>new TextEncoder().encode(s);
+function bandsX(B,xa,xb){xa=Math.floor(xa);xb=Math.ceil(xb);let x0=xb,x1=-1,y0=B.h,y1=-1;for(let y=0;y<B.h;y++)for(let x=xa;x<xb;x++)if(B.b[y*B.wb+x]){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  return x1<0?[]:[{y0,h:y1-y0+1,x0,n:x1-x0+1}]}
 function cat(parts){let n=0;for(const p of parts)n+=p.length;const o=new Uint8Array(n);let i=0;for(const p of parts){o.set(p,i);i+=p.length}return o}
 function job(B,copias){const L=S.cfg.lang,dx=Math.round(+S.cfg.dx||0),dy=Math.round(+S.cfg.dy||0),q=Math.max(1,Math.min(9,+copias||1));
   if(L==="zpl"||L==="zplimg"){const P=[`^XA^PW${LW}^LL${LH}^LH${Math.max(0,dx)},${Math.max(0,dy)}^PON\n`];
@@ -195,11 +197,11 @@ function job(B,copias){const L=S.cfg.lang,dx=Math.round(+S.cfg.dx||0),dy=Math.ro
 // ZPL com comandos nativos da impressora (texto, código de barras, QR, caixas): poucos dados e
 // não depende de gráfico. Só os logos vão como imagem pequena (^GFA).
 async function zplNativo(fd,copias){const q=Math.max(1,Math.min(9,+copias||1)),dx=Math.max(0,Math.round(+S.cfg.dx||0)),dy=Math.max(0,Math.round(+S.cfg.dy||0)),M=14;
-  const zt=t=>String(t??"").replace(/[\^~]/g," ");const P=[`^XA^MNY^MTD^CI28^PW${LW}^LL${LH}^LH${dx},${dy}^PON\n`];
+  const zt=t=>String(t??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\x20-\x7E]/g," ").replace(/[\^~]/g," ");const P=[`^XA^PW${LW}^LL${LH}${dx||dy?`^LH${dx},${dy}`:""}\n`];
   // logos (imagem pequena)
-  if(S.cfg.logos&&LOGOS.length){const ims=(await Promise.all(LOGOS.map(loadImg))).filter(Boolean);const cv=document.createElement("canvas");cv.width=LW;cv.height=74;const ctx=cv.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,LW,74);
+  if(S.cfg.logos&&S.cfg.zlogo!==false&&LOGOS.length){const ims=(await Promise.all(LOGOS.map(loadImg))).filter(Boolean);const cv=document.createElement("canvas");cv.width=LW;cv.height=74;const ctx=cv.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,LW,74);
     if(ims[0])drawLogo(ctx,ims[0],M,M,230,60,false);if(ims[1])drawLogo(ctx,ims[1],LW-M-230,M,230,60,true);const B=toBits(cv);
-    for(const s of bands(B,74)){let hx="";for(let y=s.y0;y<s.y0+s.h;y++)for(let x=s.x0;x<s.x0+s.n;x++)hx+=hex2(B.b[y*B.wb+x]);P.push(`^FO${s.x0*8},${s.y0}^GFA,${s.n*s.h},${s.n*s.h},${s.n},${hx}^FS\n`)}}
+    for(const s of [...bandsX(B,0,LW/16),...bandsX(B,LW/16,B.wb)]){let hx="";for(let y=s.y0;y<s.y0+s.h;y++)for(let x=s.x0;x<s.x0+s.n;x++)hx+=hex2(B.b[y*B.wb+x]);P.push(`^FO${s.x0*8},${s.y0}^GFA,${s.n*s.h},${s.n*s.h},${s.n},${hx}^FS\n`)}}
   P.push(`^FO0,26^A0N,40,40^FB${LW},1,0,C^FDLOTE^FS\n`);
   // nº do lote: altura fixa e largura ajustada para caber
   const lt=zt(fd.lote||"—"),h=290,w=Math.min(290,Math.floor((LW-2*M)/(Math.max(1,lt.length)*0.62)));
@@ -359,7 +361,7 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
    <label><span>Espera ao conectar (ms)</span><input type="number" id="pEsp" value="${+c.espera||1800}" step="500" min="0"></label></div>
   <label class="opt"><input type="checkbox" id="pAuto"${c.auto?" checked":""}> Imprimir sozinho logo após ler o fardo</label>
   <label class="opt"><input type="checkbox" id="pLogo"${c.logos?" checked":""}> Logos na etiqueta ${LOGOS.length?"":"<small class='muted'>(o pacote atual não tem logos)</small>"}</label>
-  <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="pPick">Escolher impressora</button><button class="btn" type="button" id="pTest">Imprimir teste</button></div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="pLing">🔎 Descobrir linguagem</button><button class="btn" type="button" id="pZdg">🧪 Diagnóstico ZPL</button><button class="btn" type="button" id="pCal">📏 Calibrar etiqueta</button></div>
+  <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="pPick">Escolher impressora</button><button class="btn" type="button" id="pTest">Imprimir teste</button></div><div class="row" style="margin-top:8px"><button class="btn" type="button" id="pLing">🔎 Descobrir linguagem</button><button class="btn" type="button" id="pZdg">🧪 Diagnóstico ZPL</button><button class="btn" type="button" id="pCal">📏 Calibrar etiqueta</button><button class="btn" type="button" id="pZd2">🧪 Diagnóstico 2</button></div>
   <p class="hint" id="pInfo">${PRN.ok()?"":"⚠ Este navegador não acessa impressora Bluetooth direto: atualize o Chrome (138 ou mais novo) ou use o app RawBT."}</p>
   <p class="hint">1 mm = 8 pontos. Se a etiqueta sair deslocada, ajuste e imprima o teste de novo. Se sair só texto estranho ou nada, troque a <b>Linguagem</b>.</p>
   <button class="btn big" type="button" data-x style="margin-top:10px">Fechar</button>`,o=>{
@@ -368,6 +370,15 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   $("#pPick").onclick=async()=>{sv();if(c.modo==="rawbt"){toast("No modo RawBT a impressora é escolhida dentro do app RawBT.");return}if(c.modo==="sistema"){toast("Neste modo a impressora é escolhida na janela de impressão do Android, ao imprimir.");return}
     try{if(c.modo==="ble"){await BLE.escolher();const ch=await BLE.abrir();$("#pInfo").textContent="✓ Impressora conectada por BLE ("+ch.service.uuid.slice(0,8)+").";}else{await PRN.escolher();await PRN.abrir();$("#pInfo").textContent="✓ Impressora conectada."}prnStatus();sOk()}catch(e){if(e&&e.name==="NotFoundError")return;$("#pInfo").textContent="⚠ "+((e&&e.message)||"Não foi possível conectar.");sBad()}};
   $("#pTest").onclick=async()=>{sv();closeSheet();await testePrint()};
+  $("#pZd2").onclick=async()=>{sv();if(c.modo==="sistema"){toast("Use a conexão RawBT.");return}
+    const d17="0789853330"+"2"+"729047",code="00"+d17+saiCheck(d17),sq="FF".repeat(6*48);
+    const jobs=["^XA^CI28^PW832^LL600^FO40,40^A0N,60,60^FDTESTE 1 acentos^FS^XZ\n",
+      "^XA^FO0,40^A0N,60,60^FB832,1,0,C^FDTESTE 2 centro^FS^XZ\n",
+      `^XA^FO40,30^A0N,50,50^FDTESTE 3 barras^FS^FO40,100^BY3,3,66^BCN,66,N,N,N^FD>;${code}^FS^XZ\n`,
+      `^XA^FO40,30^A0N,50,50^FDTESTE 4 QR^FS^FO40,100^BQN,2,7^FDMA,${code}^FS^XZ\n`,
+      `^XA^FO40,30^A0N,50,50^FDTESTE 5 imagem^FS^FO40,110^GFA,${6*48},${6*48},6,${sq}^FS^XZ\n`];
+    try{await enviarBruto(enc(jobs.join("")));$("#pInfo").innerHTML="Enviadas 5 etiquetas. Me diga quais saíram com conteúdo: <b>1</b> acentos · <b>2</b> texto centralizado · <b>3</b> código de barras · <b>4</b> QR code · <b>5</b> imagem (quadrado preto).";sOk()}
+    catch(e){$("#pInfo").textContent="⚠ "+((e&&e.message)||"Falha ao enviar.");sBad()}};
   // calibração do sensor de etiqueta (gap) e modo térmico direto, gravado na impressora
   $("#pCal").onclick=async()=>{sv();if(c.modo==="sistema"){toast("Use a conexão Bluetooth direto ou RawBT.");return}
     try{await enviarBruto(enc("^XA^MNY^MTD^LL600^PW832^JUS^XZ\n~JC\n"));$("#pInfo").innerHTML="Calibração enviada: a impressora deve puxar algumas etiquetas e parar no início de uma. Depois toque em <b>Imprimir teste</b>.";sOk()}
