@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.37";
+const VER="1.0.38";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -320,7 +320,7 @@ function findFard(P){if(P.prensa){const ri=IX.f.get(P.prensa*1e7+P.num);return r
 function onRead(raw){if(!PAC){toast("Carregue o pacote primeiro.");return}const P=scanParse(raw);
   if(!P||P.bad){ui.fd=null;ui.msg={c:"bad",t:"Leitura não reconhecida. Leia a etiqueta SAI (código de barras ou QR) ou digite o nº do fardo."};sBad();render();return}
   if(P.badCheck){ui.fd=null;ui.msg={c:"bad",t:"Código SAI com dígito verificador errado. Leia de novo."};sBad();render();return}
-  if(P.code&&!S.pref)S.pref=P.code.slice(0,12);
+  if(P.code&&S.pref!==P.code.slice(0,12)){S.pref=P.code.slice(0,12);saveState()}
   const r=findFard(P);
   if(r&&r.amb){showSheet(`<h3>Fardo ${g3(P.num)}: qual prensa?</h3><p class="muted">Esse número existe em mais de uma prensa.</p>${r.amb.map(p=>`<button class="btn big" type="button" data-pp="${p}" style="margin-bottom:8px">Prensa ${p}</button>`).join("")}<button class="btn big" type="button" data-x>Cancelar</button>`,o=>{
     o.querySelectorAll("[data-pp]").forEach(b=>b.onclick=()=>{closeSheet();show({prensa:+b.dataset.pp,num:P.num,ok:true})})});return}
@@ -330,6 +330,7 @@ function show(P,r){r=r||findFard(P);
   const lote=rowLote(r.ri),code=P.code||saiFrom(S.pref,r.p,r.n);
   ui.fd={p:r.p,n:r.n,lote,prod:prodOfLote(lote),code,dben:rowDate(r.ri,3),dsai:rowDate(r.ri,4)};
   if(!lote){ui.msg={c:"warn",t:"Fardo sem lote no pacote (aguardando HVI / lote não criado). Não imprime."};sWarn()}
+  else if(!code){ui.msg={c:"warn",t:"Sem código de barras e QR: o app ainda não conhece o prefixo SAI da algodoeira. Leia com o coletor a etiqueta SAI de qualquer fardo uma vez (o app aprende e passa a gerar sozinho) ou informe o prefixo em ☰ Menu."};sWarn()}
   else{ui.msg=null;sOk()}
   render();if(lote&&S.cfg.auto)imprimir(ui.fd)}
 
@@ -378,6 +379,7 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="ble"${c.modo==="ble"?" selected":""}>Bluetooth BLE (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT (recomendado p/ Sewoo)</option><option value="sistema"${c.modo==="sistema"?" selected":""}>Impressora do sistema (Wi-Fi/rede · teste)</option></select></label>
    <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="zplimg"${c.lang==="zplimg"?" selected":""}>ZPL (imagem)</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option><option value="cpcleg"${c.lang==="cpcleg"?" selected":""}>CPCL (gráfico hex · EG)</option></select></label>
    <label><span>Deslocar ↔ (pontos; negativo = esquerda)</span><input type="number" id="pDx" value="${+c.dx||0}" step="8"></label><label><span>Deslocar ↕ (pontos; negativo = cima)</span><input type="number" id="pDy" value="${+c.dy||0}" step="8"></label>
+   <label><span>Prefixo SAI (aprendido na 1ª leitura)</span><input type="text" id="pPref" inputmode="numeric" value="${esc(S.pref||"")}" placeholder="ex.: 000789853330" maxlength="12"></label>
    <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label>
    <label><span>Espera ao conectar (ms)</span><input type="number" id="pEsp" value="${+c.espera||1800}" step="500" min="0"></label></div>
   <label class="opt"><input type="checkbox" id="pAuto"${c.auto?" checked":""}> Imprimir sozinho logo após ler o fardo</label>
@@ -386,7 +388,7 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   <p class="hint" id="pInfo">${PRN.ok()?"":"⚠ Este navegador não acessa impressora Bluetooth direto: atualize o Chrome (138 ou mais novo) ou use o app RawBT."}</p>
   <p class="hint">1 mm = 8 pontos. Se a etiqueta sair deslocada, ajuste e imprima o teste de novo. Se sair só texto estranho ou nada, troque a <b>Linguagem</b>.</p>
   <button class="btn big" type="button" data-x style="margin-top:10px">Fechar</button>`,o=>{
-  const sv=()=>{c.modo=$("#pModo").value;c.lang=$("#pLang").value;c.dx=+$("#pDx").value||0;c.dy=+$("#pDy").value||0;c.copias=Math.max(1,Math.min(9,+$("#pCop").value||1));c.espera=Math.max(0,+$("#pEsp").value||0);c.auto=$("#pAuto").checked;c.logos=$("#pLogo").checked;saveState();prnStatus()};
+  const sv=()=>{c.modo=$("#pModo").value;c.lang=$("#pLang").value;c.dx=+$("#pDx").value||0;c.dy=+$("#pDy").value||0;c.copias=Math.max(1,Math.min(9,+$("#pCop").value||1));{const pf=($("#pPref").value||"").replace(/\D/g,"");S.pref=pf.length===12&&pf.startsWith("00")?pf:(pf?S.pref:"")}c.espera=Math.max(0,+$("#pEsp").value||0);c.auto=$("#pAuto").checked;c.logos=$("#pLogo").checked;saveState();prnStatus()};
   o.querySelectorAll("select,input").forEach(e=>e.onchange=sv);
   $("#pPick").onclick=async()=>{sv();if(c.modo==="rawbt"){toast("No modo RawBT a impressora é escolhida dentro do app RawBT.");return}if(c.modo==="sistema"){toast("Neste modo a impressora é escolhida na janela de impressão do Android, ao imprimir.");return}
     try{if(c.modo==="ble"){await BLE.escolher();const ch=await BLE.abrir();$("#pInfo").textContent="✓ Impressora conectada por BLE ("+ch.service.uuid.slice(0,8)+").";}else{await PRN.escolher();await PRN.abrir();$("#pInfo").textContent="✓ Impressora conectada."}prnStatus();sOk()}catch(e){if(e&&e.name==="NotFoundError")return;$("#pInfo").textContent="⚠ "+((e&&e.message)||"Não foi possível conectar.");sBad()}};
