@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.25";
+const VER="1.0.26";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -89,7 +89,7 @@ const DB={db:null,
 
 // ---------- estado ----------
 let PAC=null,IX=null,LOGOS=[];
-const CFG0={lang:"zpl",modo:"serial",auto:false,dx:0,dy:0,copias:1,logos:true,espera:1800,bloco:256};
+const CFG0={lang:"zpl",modo:"rawbt",auto:false,dx:0,dy:0,copias:1,logos:true,espera:1800,bloco:256};
 let S={disp:"",cfg:{...CFG0},hist:[]};
 let ui={fd:null,msg:null,busy:false};
 async function saveState(){try{await DB.set("estado",S)}catch(e){toast("Não foi possível salvar no aparelho!")}}
@@ -352,7 +352,7 @@ $("#bMenu").onclick=()=>showSheet(`<h3>Menu</h3>
   $("#mHist").onclick=()=>{if(confirm("Apagar o histórico de etiquetas impressas deste aparelho?")){S.hist=[];saveState();closeSheet();render()}}});
 function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
   <p class="hint" style="margin-top:0">Sewoo LK-P400 · etiqueta 105 × 75 mm. Antes, pareie a impressora no Bluetooth do coletor (Configurações do Android › Bluetooth).</p>
-  <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="ble"${c.modo==="ble"?" selected":""}>Bluetooth BLE (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT</option><option value="sistema"${c.modo==="sistema"?" selected":""}>Impressora do sistema (Wi-Fi/rede · teste)</option></select></label>
+  <div class="fl"><label><span>Conexão</span><select id="pModo"><option value="serial"${c.modo==="serial"?" selected":""}>Bluetooth direto (Chrome)</option><option value="ble"${c.modo==="ble"?" selected":""}>Bluetooth BLE (Chrome)</option><option value="rawbt"${c.modo==="rawbt"?" selected":""}>App RawBT (recomendado p/ Sewoo)</option><option value="sistema"${c.modo==="sistema"?" selected":""}>Impressora do sistema (Wi-Fi/rede · teste)</option></select></label>
    <label><span>Linguagem da impressora</span><select id="pLang"><option value="cpcl"${c.lang==="cpcl"?" selected":""}>CPCL</option><option value="zpl"${c.lang==="zpl"?" selected":""}>ZPL</option><option value="zplimg"${c.lang==="zplimg"?" selected":""}>ZPL (imagem)</option><option value="escpos"${c.lang==="escpos"?" selected":""}>ESC/POS</option><option value="cpcleg"${c.lang==="cpcleg"?" selected":""}>CPCL (gráfico hex · EG)</option></select></label>
    <label><span>Deslocar → (pontos)</span><input type="number" id="pDx" value="${+c.dx||0}" step="8"></label><label><span>Deslocar ↓ (pontos)</span><input type="number" id="pDy" value="${+c.dy||0}" step="8"></label>
    <label><span>Cópias por fardo</span><input type="number" id="pCop" value="${+c.copias||1}" min="1" max="9"></label>
