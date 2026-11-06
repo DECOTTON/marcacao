@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.36";
+const VER="1.0.37";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -205,8 +205,8 @@ function job(B,copias){const L=S.cfg.lang,dx=Math.round(+S.cfg.dx||0),dy=Math.ro
 // ZPL com comandos nativos da impressora (texto, código de barras, QR, caixas): poucos dados e
 // não depende de gráfico. Só os logos vão como imagem pequena (^GFA).
 // largura de cada caractere na fonte 0 da impressora (proporção da largura pedida); medido na Sewoo
-// deslocamento padrão da Sewoo LK-P400 (a impressão saía 2 mm para a direita); o ajuste do menu soma a este
-const ZOX=-16;
+// deslocamento padrão da Sewoo LK-P400 (0 = sem deslocamento); o ajuste do menu soma a este
+const ZOX=0;
 const ZF0={dig:.414,up:.58,low:.50,oth:.38},ZCAP=.748;
 async function zplNativo(fd,copias){const q=Math.max(1,Math.min(9,+copias||1)),ox=ZOX+Math.round(+S.cfg.dx||0),oy=Math.round(+S.cfg.dy||0),X=v=>Math.max(0,Math.round(v+ox)),Y=v=>Math.max(0,Math.round(v+oy)),M=14;
   const zc=t=>String(t??"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\x20-\x7E]/g," ").replace(/[\^~]/g," ");const P=[`^XA~SD28^MD20^PW${LW}^LL${LH}\n`];
