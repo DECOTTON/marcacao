@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.30";
+const VER="1.0.31";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -259,7 +259,8 @@ function printSistema(cv,copias){return new Promise(ok=>{const url=cv.toDataURL(
     .pg{position:relative;width:210mm;height:297mm;overflow:hidden;page-break-after:always}.pg:last-child{page-break-after:auto}.pg svg.ct{position:absolute;left:0;top:0;z-index:2}.pg img{position:absolute;display:block;image-rendering:pixelated}</style></head><body>${Array.from({length:n},()=>pg).join("")}</body></html>`);d.close();
   let foi=false;const go=()=>{if(foi)return;foi=true;ok();setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){}setTimeout(()=>f.remove(),60000)},50)};const im=d.images[0];if(im&&!im.complete){im.onload=go;im.onerror=go;setTimeout(go,2000)}else setTimeout(go,100)})}
 // Bluetooth BLE (Web Bluetooth): procura na impressora uma característica de escrita (serviços de "porta serial" comuns)
-const BLE_SVCS=["38eb4a80-c570-11e3-9507-0002a5d5c51b","0000180a-0000-1000-8000-00805f9b34fb","0000fff0-0000-1000-8000-00805f9b34fb","0000ffb0-0000-1000-8000-00805f9b34fb","000018f0-0000-1000-8000-00805f9b34fb","49535343-fe7d-4ae5-8fa9-9fafd205e455","6e400001-b5a3-f393-e0a9-e50e24dcca9e","0000ff00-0000-1000-8000-00805f9b34fb","0000ffe0-0000-1000-8000-00805f9b34fb","0000fee7-0000-1000-8000-00805f9b34fb","e7810a71-73ae-499d-8c15-faa9aef0c3f2","000018f1-0000-1000-8000-00805f9b34fb","0000ae30-0000-1000-8000-00805f9b34fb","0000af30-0000-1000-8000-00805f9b34fb","0000fefb-0000-1000-8000-00805f9b34fb","2456e1b9-26e2-8f83-e744-f34f01e9d701","0003cdd0-0000-1000-8000-00805f9b0131","569a1101-b87f-490c-92cb-11ba5ea5167c","0783b03e-8535-b5a0-7140-a304d2495cb7","331a36f5-2459-45ea-9d95-6142f0c4b307","0000ffa0-0000-1000-8000-00805f9b34fb","0000ffc0-0000-1000-8000-00805f9b34fb","0000ffd0-0000-1000-8000-00805f9b34fb","0000fe59-0000-1000-8000-00805f9b34fb","00001101-0000-1000-8000-00805f9b34fb","0000feea-0000-1000-8000-00805f9b34fb","0000fd00-0000-1000-8000-00805f9b34fb"];
+const BLE_SEWOO="0000ffb0-d102-11e1-9b23-00025b00a5a5",BLE_SEWOO_W="0000ffb2-d102-11e1-9b23-00025b00a5a5";
+const BLE_SVCS=["0000ffb0-d102-11e1-9b23-00025b00a5a5","38eb4a80-c570-11e3-9507-0002a5d5c51b","0000180a-0000-1000-8000-00805f9b34fb","0000fff0-0000-1000-8000-00805f9b34fb","0000ffb0-0000-1000-8000-00805f9b34fb","000018f0-0000-1000-8000-00805f9b34fb","49535343-fe7d-4ae5-8fa9-9fafd205e455","6e400001-b5a3-f393-e0a9-e50e24dcca9e","0000ff00-0000-1000-8000-00805f9b34fb","0000ffe0-0000-1000-8000-00805f9b34fb","0000fee7-0000-1000-8000-00805f9b34fb","e7810a71-73ae-499d-8c15-faa9aef0c3f2","000018f1-0000-1000-8000-00805f9b34fb","0000ae30-0000-1000-8000-00805f9b34fb","0000af30-0000-1000-8000-00805f9b34fb","0000fefb-0000-1000-8000-00805f9b34fb","2456e1b9-26e2-8f83-e744-f34f01e9d701","0003cdd0-0000-1000-8000-00805f9b0131","569a1101-b87f-490c-92cb-11ba5ea5167c","0783b03e-8535-b5a0-7140-a304d2495cb7","331a36f5-2459-45ea-9d95-6142f0c4b307","0000ffa0-0000-1000-8000-00805f9b34fb","0000ffc0-0000-1000-8000-00805f9b34fb","0000ffd0-0000-1000-8000-00805f9b34fb","0000fe59-0000-1000-8000-00805f9b34fb","00001101-0000-1000-8000-00805f9b34fb","0000feea-0000-1000-8000-00805f9b34fb","0000fd00-0000-1000-8000-00805f9b34fb"];
 const BLE={dev:null,ch:null,
   ok(){return !!(navigator.bluetooth&&navigator.bluetooth.requestDevice)},
   async escolher(){if(!this.ok())throw new Error("Este navegador não tem Bluetooth BLE.");
@@ -275,10 +276,13 @@ const BLE={dev:null,ch:null,
     for(const sv of svs){let cs=[];try{cs=await sv.getCharacteristics()}catch(e){}
       rel.push(sv.uuid.slice(0,8)+": "+(cs.map(c=>c.uuid.slice(0,8)+"("+["read","write","writeWithoutResponse","notify","indicate"].filter(k=>c.properties[k]).map(k=>({read:"r",write:"w",writeWithoutResponse:"W",notify:"n",indicate:"i"})[k]).join("")+")").join(" ")||"—"));
       if(sv.uuid.startsWith("0000180a"))for(const c of cs){if(["00002a24","00002a29","00002a26","00002a27"].some(u=>c.uuid.startsWith(u)))try{const v=await c.readValue();rel.push("  "+c.uuid.slice(4,8)+"="+new TextDecoder().decode(v))}catch(e){}}
-      for(const c of cs){if(c.properties.writeWithoutResponse||c.properties.write){best=best||c;if(BLE_SVCS.includes(sv.uuid))best=c}}if(best&&BLE_SVCS.includes(sv.uuid))break}
+      for(const c of cs){if(c.uuid===BLE_SEWOO_W){best=c;break}if(c.properties.writeWithoutResponse||c.properties.write){best=best||c;if(BLE_SVCS.includes(sv.uuid))best=c}}if(best&&(best.uuid===BLE_SEWOO_W||BLE_SVCS.includes(sv.uuid)))break}
     if(!best){BLE.rel=rel.join("\n");throw new Error("A impressora conectou por BLE, mas não tem canal de escrita conhecido. Tire um print desta tela e me envie:\n"+BLE.rel)}this.ch=best;await new Promise(ok=>setTimeout(ok,600));return best},
-  async enviar(bytes){const c=await this.abrir(),ck=Math.max(20,+S.cfg.bleBloco||180);
-    for(let i=0;i<bytes.length;i+=ck){const part=bytes.slice(i,i+ck);if(c.properties.writeWithoutResponse&&c.writeValueWithoutResponse)await c.writeValueWithoutResponse(part);else await c.writeValue(part);await new Promise(ok=>setTimeout(ok,8))}}};
+  async enviar(bytes){const c=await this.abrir();let ck=Math.max(20,+(this.ck||S.cfg.bleBloco||180));
+    const w=async part=>{if(c.properties.writeWithoutResponse&&c.writeValueWithoutResponse)await c.writeValueWithoutResponse(part);else if(c.writeValueWithResponse)await c.writeValueWithResponse(part);else await c.writeValue(part)};
+    for(let i=0;i<bytes.length;){const part=bytes.slice(i,i+ck);
+      try{await w(part)}catch(e){if(ck>20){ck=20;this.ck=20;continue}throw new Error("Falha ao enviar por BLE: "+e.message)}
+      i+=part.length;await new Promise(ok=>setTimeout(ok,c.properties.writeWithoutResponse?15:2))}}};
 async function enviarBruto(bytes){if(S.cfg.modo==="ble")return BLE.enviar(bytes);if(S.cfg.modo==="rawbt"){let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));location.href="rawbt:base64,"+btoa(s);return}await PRN.enviar(bytes)}
 async function prnStatus(){const e=$("#pSt");if(!e)return;if(S.cfg.modo==="ble"){const ok=BLE.dev&&BLE.dev.gatt&&BLE.dev.gatt.connected;e.textContent=ok?"🖨 BLE pronta":"🖨 BLE";e.className="pst"+(ok?" on":"");return}if(S.cfg.modo==="sistema"){e.textContent="🖨 Sistema";e.className="pst on";return}if(S.cfg.modo==="rawbt"){e.textContent="🖨 RawBT";e.className="pst on";return}
   const p=PRN.port||await PRN.lembrada();e.textContent=p?"🖨 Pronta":"🖨 Sem impressora";e.className="pst"+(p?" on":"")}
