@@ -74,7 +74,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.27";
+const VER="1.0.28";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -197,7 +197,7 @@ function job(B,copias){const L=S.cfg.lang,dx=Math.round(+S.cfg.dx||0),dy=Math.ro
 // ZPL com comandos nativos da impressora (texto, código de barras, QR, caixas): poucos dados e
 // não depende de gráfico. Só os logos vão como imagem pequena (^GFA).
 async function zplNativo(fd,copias){const q=Math.max(1,Math.min(9,+copias||1)),dx=Math.max(0,Math.round(+S.cfg.dx||0)),dy=Math.max(0,Math.round(+S.cfg.dy||0)),M=14;
-  const zt=t=>String(t??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\x20-\x7E]/g," ").replace(/[\^~]/g," ");const P=[`^XA^PW${LW}^LL${LH}${dx||dy?`^LH${dx},${dy}`:""}\n`];
+  const zt=t=>String(t??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\x20-\x7E]/g," ").replace(/[\^~]/g," ");const P=[`^XA~SD28^MD20^PW${LW}^LL${LH}${dx||dy?`^LH${dx},${dy}`:""}\n`];
   // logos (imagem pequena)
   if(S.cfg.logos&&S.cfg.zlogo!==false&&LOGOS.length){const ims=(await Promise.all(LOGOS.map(loadImg))).filter(Boolean);const cv=document.createElement("canvas");cv.width=LW;cv.height=74;const ctx=cv.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,LW,74);
     if(ims[0])drawLogo(ctx,ims[0],M,M,230,60,false);if(ims[1])drawLogo(ctx,ims[1],LW-M-230,M,230,60,true);const B=toBits(cv);
@@ -371,13 +371,15 @@ function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
     try{if(c.modo==="ble"){await BLE.escolher();const ch=await BLE.abrir();$("#pInfo").textContent="✓ Impressora conectada por BLE ("+ch.service.uuid.slice(0,8)+").";}else{await PRN.escolher();await PRN.abrir();$("#pInfo").textContent="✓ Impressora conectada."}prnStatus();sOk()}catch(e){if(e&&e.name==="NotFoundError")return;$("#pInfo").textContent="⚠ "+((e&&e.message)||"Não foi possível conectar.");sBad()}};
   $("#pTest").onclick=async()=>{sv();closeSheet();await testePrint()};
   $("#pZd2").onclick=async()=>{sv();if(c.modo==="sistema"){toast("Use a conexão RawBT.");return}
-    const d17="0789853330"+"2"+"729047",code="00"+d17+saiCheck(d17),sq="FF".repeat(6*48);
-    const jobs=["^XA^CI28^PW832^LL600^FO40,40^A0N,60,60^FDTESTE 1 acentos^FS^XZ\n",
-      "^XA^FO0,40^A0N,60,60^FB832,1,0,C^FDTESTE 2 centro^FS^XZ\n",
-      `^XA^FO40,30^A0N,50,50^FDTESTE 3 barras^FS^FO40,100^BY3,3,66^BCN,66,N,N,N^FD>;${code}^FS^XZ\n`,
-      `^XA^FO40,30^A0N,50,50^FDTESTE 4 QR^FS^FO40,100^BQN,2,7^FDMA,${code}^FS^XZ\n`,
-      `^XA^FO40,30^A0N,50,50^FDTESTE 5 imagem^FS^FO40,110^GFA,${6*48},${6*48},6,${sq}^FS^XZ\n`];
-    try{await enviarBruto(enc(jobs.join("")));$("#pInfo").innerHTML="Enviadas 5 etiquetas. Me diga quais saíram com conteúdo: <b>1</b> acentos · <b>2</b> texto centralizado · <b>3</b> código de barras · <b>4</b> QR code · <b>5</b> imagem (quadrado preto).";sOk()}
+    const d17="0789853330"+"2"+"729047",code="00"+d17+saiCheck(d17),sq="FF".repeat(6*48),H="^XA~SD28^MD20";
+    const jobs=[`${H}^FO40,40^A0N,60,60^FDTESTE 1 controle^FS^XZ\n`,
+      `${H}^FO0,40^A0N,60,60^FB832,1,0,C^FDTESTE 2 centro^FS^XZ\n`,
+      `${H}^FO40,30^A0N,50,50^FDTESTE 3 barras^FS^FO40,100^BY3,3,66^BCN,66,N,N,N^FD>;${code}^FS^XZ\n`,
+      `${H}^FO40,30^A0N,50,50^FDTESTE 4 QR^FS^FO40,100^BQN,2,7^FDMA,${code}^FS^XZ\n`,
+      `${H}^FO40,30^A0N,50,50^FDTESTE 5 imagem^FS^FO40,110^GFA,${6*48},${6*48},6,${sq}^FS^XZ\n`,
+      `${H}^FO40,40^GB400,90,90^FS^FO60,55^A0N,60,60^FR^FDTESTE 6 inv^FS^XZ\n`,
+      `${H}^PW832^LL600^FO40,40^A0N,60,60^FDTESTE 7 tamanho^FS^XZ\n`];
+    try{await enviarBruto(enc(jobs.join("")));$("#pInfo").innerHTML="Enviadas 7 etiquetas. Me diga <b>quantas saíram</b> e <b>até qual número</b> veio com conteúdo: 1 controle · 2 centralizado · 3 código de barras · 4 QR code · 5 imagem · 6 texto invertido · 7 tamanho da etiqueta.";sOk()}
     catch(e){$("#pInfo").textContent="⚠ "+((e&&e.message)||"Falha ao enviar.");sBad()}};
   // calibração do sensor de etiqueta (gap) e modo térmico direto, gravado na impressora
   $("#pCal").onclick=async()=>{sv();if(c.modo==="sistema"){toast("Use a conexão Bluetooth direto ou RawBT.");return}
