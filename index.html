@@ -57,6 +57,17 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 .cam .cmsg{position:absolute;left:0;right:0;top:12px;text-align:center;color:#fff;font-weight:700;text-shadow:0 1px 3px #000}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1D2E2C;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;font-weight:600;max-width:90vw;text-align:center}
 .hide{display:none!important}
+/* menu (padrão dos apps do coletor) */
+.mnu{display:flex;flex-direction:column;gap:2px;margin:0 0 8px}
+.mng{font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:12px 2px 4px}.mng:first-child{margin-top:0}
+.mni{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px 12px;margin:0 0 6px;font:inherit;color:var(--ink);min-height:56px}
+.mni:active{background:#EEF1F0}
+.mni .ic{flex:none;width:36px;height:36px;border-radius:10px;background:#E7ECF5;color:var(--acc);display:flex;align-items:center;justify-content:center;font-size:19px}
+.mni .tx{flex:1;min-width:0;display:flex;flex-direction:column}.mni .tx b{font-size:16.5px;line-height:1.2}.mni .tx small{font-size:12.5px;color:var(--mut);margin-top:2px;line-height:1.3}
+.mni .ch{flex:none;color:var(--mut);font-size:22px;line-height:1}
+.mni .bd{flex:none;background:#FFF2D6;color:#8A5A00;border:1px solid #F2C230;border-radius:999px;padding:2px 9px;font-size:13px;font-weight:800}
+.mni.dg .ic{background:#FDECEC;color:var(--bad)}.mni.dg .tx b{color:var(--bad)}
+.mnv{text-align:center;font-size:12px;color:var(--mut);margin:6px 0 10px}
 </style>
 </head>
 <body>
@@ -74,7 +85,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.39";
+const VER="1.0.40";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -366,12 +377,15 @@ function showSheet(html,wireFn){closeSheet();{const i=$("#scan");if(i)i.blur()} 
   const o=document.createElement("div");o.className="ovl";o.innerHTML=`<div class="sheet">${html}</div>`;document.body.appendChild(o);
   o.addEventListener("click",e=>{if(e.target===o||e.target.closest("[data-x]"))closeSheet()});if(wireFn)wireFn(o)}
 function closeSheet(){const o=$(".ovl");if(o)o.remove();setTimeout(focusScan,50)}
-$("#bMenu").onclick=()=>showSheet(`<h3>Menu</h3>
-  <button class="btn big" type="button" id="mPrn" style="margin-bottom:8px">🖨 Impressora</button>
-  <button class="btn big" type="button" id="mPac" style="margin-bottom:8px">📂 Carregar pacote novo</button>
-  <button class="btn big" type="button" id="mDisp" style="margin-bottom:8px">✎ Nome deste aparelho (${esc(S.disp||"não definido")})</button>
-  <button class="btn big" type="button" id="mHist" style="margin-bottom:8px">🗑 Limpar histórico de impressões</button>
-  <p class="hint">${PAC?`Pacote: ${fmt(nFard(PAC))} fardinhos · ${fmt(PAC.lc.length)} lotes · gerado em ${new Date(PAC.gerado).toLocaleString("pt-BR")}`:"Sem pacote."} · versão ${VER}</p>
+// item do menu: ícone, título, detalhe e (opcional) contador de pendências
+const mnG=t=>`<div class="mng">${t}</div>`;
+const mnI=(id,ic,t,sub,o)=>{o=o||{};return`<button class="mni${o.dg?" dg":""}" type="button" id="${id}"><span class="ic">${ic}</span><span class="tx"><b>${t}</b>${sub?`<small>${sub}</small>`:""}</span>${o.bd?`<span class="bd">${o.bd}</span>`:""}<span class="ch">›</span></button>`};
+const mnPac=()=>PAC?`Gerado em ${new Date(PAC.gerado).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}`:"Nenhum pacote carregado";
+$("#bMenu").onclick=()=>showSheet(`<h3>Menu</h3><div class="mnu">
+  ${mnG("Impressão")}${mnI("mPrn","🖨","Impressora",`Sewoo LK-P400 · ${({serial:"Bluetooth direto",ble:"Bluetooth BLE",rawbt:"App RawBT",sistema:"Impressora do sistema"})[S.cfg.modo]||"configurar"} · ${String(S.cfg.lang||"").toUpperCase()}`)}
+  ${mnG("Pacote")}${mnI("mPac","📂","Carregar pacote novo",PAC?`${mnPac()} · ${fmt(nFard(PAC))} fardinhos · ${fmt(PAC.lc.length)} lotes`:mnPac())}
+  ${mnG("Aparelho")}${mnI("mDisp","✎","Nome deste aparelho",esc(S.disp||"não definido"))}${mnI("mHist","🗑","Limpar histórico de impressões",`${fmt((S.hist||[]).length)} etiqueta(s) no histórico`,{dg:1})}
+  </div><p class="mnv">Marcação · versão ${VER}</p>
   <button class="btn big" type="button" data-x>Fechar</button>`,o=>{
   $("#mPac").onclick=()=>{closeSheet();$("#fPac").click()};$("#mPrn").onclick=openPrinter;
   $("#mDisp").onclick=()=>{const v=prompt("Nome deste aparelho (ex.: Coletor marcação 1):",S.disp||"");if(v!=null){S.disp=v.trim();saveState();closeSheet();render()}};
