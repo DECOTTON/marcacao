@@ -89,7 +89,10 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.42";
+const VER="1.0.43";
+// teclado escondido: o campo recebe o foco como "somente leitura" (o Android não abre o teclado), depois volta a aceitar
+// o texto do leitor e o app pede ao Chrome para esconder o teclado. Tocar no campo abre o teclado para digitar o nº.
+let kbUser=false;const kbHide=()=>{try{if(!kbUser&&navigator.virtualKeyboard)navigator.virtualKeyboard.hide()}catch(e){}};
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>n==null?"—":Number(n).toLocaleString("pt-BR");
@@ -485,11 +488,15 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 
 
 // ---------- leitor (gatilho do coletor, teclado ou câmera) ----------
-function focusScan(){const i=$("#scan");if(ui.kbOff)return;if(i&&PAC&&!$(".ovl")&&!$(".cam")&&document.activeElement!==i){try{i.focus({preventScroll:true})}catch(e){i.focus()}}}
+function focusScan(){const i=$("#scan");if(ui.kbOff)return;if(i&&PAC&&!$(".ovl")&&!$(".cam")&&document.activeElement!==i){kbUser=false;i.setAttribute("virtualkeyboardpolicy","manual");i.readOnly=true;try{i.focus({preventScroll:true})}catch(e){i.focus()}kbHide();setTimeout(()=>{i.readOnly=false;kbMove(i);kbHide();setTimeout(kbHide,150)},120)}}
 (()=>{const i=$("#scan");let tm=null;const go=()=>{clearTimeout(tm);const v=i.value.trim();i.value="";_pv="";if(v)onRead(v)};
   $("#bGo").onclick=go;$("#bCam").onclick=openCam;
   i.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key==="Tab"){e.preventDefault();go()}});
-  i.addEventListener("focus",()=>{ui.kbOff=false});
+  i.addEventListener("focus",()=>{ui.kbOff=false;kbHide()});
+  // tocar no campo: quer digitar o nº do fardo → libera o teclado até sair do campo
+  i.addEventListener("pointerdown",()=>{i.readOnly=false;i.setAttribute("virtualkeyboardpolicy","auto");if(document.activeElement===i){i.blur();setTimeout(()=>{kbUser=true;i.focus();try{navigator.virtualKeyboard&&navigator.virtualKeyboard.show()}catch(e){}},0)}else kbUser=true});
+  i.addEventListener("blur",()=>{kbUser=false});
+  if(navigator.virtualKeyboard)try{navigator.virtualKeyboard.addEventListener("geometrychange",()=>{if(document.activeElement===i&&navigator.virtualKeyboard.boundingRect.height>0)kbHide()})}catch(e){}
   i.addEventListener("input",()=>{clearTimeout(tm);const v=i.value;if(/\/00\/\d{18}/.test(v)||/\d{20}/.test(v.replace(/\D/g,"")))tm=setTimeout(go,180)});
   i.addEventListener("blur",()=>setTimeout(()=>{const a=document.activeElement;if(!a||a===document.body)focusScan()},300))})();
 document.addEventListener("pointerdown",e=>{const b=e.target.closest&&e.target.closest("button,.btn");if(b&&document.activeElement===$("#scan")&&!b.closest(".sheet"))e.preventDefault()},true);
@@ -497,7 +504,8 @@ let _pv="",_pt=0;
 setInterval(()=>{const i=$("#scan");if(!i)return;const v=i.value;if(v!==_pv){_pv=v;_pt=Date.now();return}
   if(v&&Date.now()-_pt>350&&(/\/00\/\d{18}/.test(v)||v.replace(/\D/g,"").length>=12)){i.value="";_pv="";onRead(v.trim())}},150);
 let _kb="",_kt=0,_kto=null;
-document.addEventListener("keydown",e=>{const t=e.target;if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT"))return;
+function kbMove(i){if(!_kb)return;clearTimeout(_kto);i.value=_kb;_pv=i.value;_pt=Date.now();_kb=""}
+document.addEventListener("keydown",e=>{const t=e.target;if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT")&&!(t.id==="scan"&&t.readOnly))return;
   if(e.key==="Enter"){if(_kb.length>=6){const v=_kb;_kb="";onRead(v)}_kb="";return}
   if(e.key&&e.key.length===1){const n=Date.now();if(n-_kt>300)_kb="";_kb+=e.key;_kt=n;clearTimeout(_kto);_kto=setTimeout(()=>{if(_kb.length>=12){const v=_kb;_kb="";onRead(v)}else _kb=""},350)}},true);
 const ZXW="https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/iife/reader/index.js",ZXW_WASM="https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/reader/zxing_reader.wasm";

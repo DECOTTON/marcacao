@@ -6,6 +6,7 @@ Link: https://decotton.github.io/marcacao/
 
 - Pacote: o mesmo arquivo "Pacote para o coletor" usado no app Emblocamento.
 - Impressão: Bluetooth direto pelo Chrome (Web Serial, Chrome 138+) ou pelo app RawBT. Linguagens: CPCL, ZPL ou ESC/POS.
+- Teclado escondido: o gatilho do coletor lê sem abrir o teclado. Para digitar o nº do fardo, toque no campo.
 - Nenhum dado da empresa fica no app: logos e nomes vêm dentro do pacote.
 
 `qrcode.js`: QR Code Generator for JavaScript © Kazuhiko Arase — licença MIT.
