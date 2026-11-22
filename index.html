@@ -33,7 +33,14 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 .scan::placeholder{font:500 15px system-ui,sans-serif;color:#6B7774;-webkit-text-fill-color:#6B7774}
 .hint{font-size:13px;color:var(--mut);margin:6px 0 0}
 .muted{color:var(--mut)}
-.sbar{flex:1 1 100%;display:flex;gap:6px;margin-top:4px}.sbar .scan{flex:1;min-width:0;padding:10px 12px;font-size:19px;border:2px solid var(--acc2)}
+/* campo do leitor escondido (padrão dos apps do coletor): só o gatilho lê; digitar o nº fica no Menu, liberado pelo coordenador */
+.sbar{position:fixed;top:0;left:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}.sbar .scan{width:1px;height:1px;padding:0;border:0;font-size:16px;caret-color:transparent;color:transparent;background:transparent}
+.pinrow{display:flex;gap:8px;margin:8px 0}.pinrow input{flex:1;min-width:0;font:900 28px/1 system-ui,sans-serif;letter-spacing:.3em;padding:12px;border:2px solid var(--line);border-radius:10px;text-align:center;-webkit-text-security:disc}
+.pinrow input:focus,.digin:focus{outline:none;border-color:var(--acc)}
+.digin{width:100%;box-sizing:border-box;font:900 34px/1 system-ui,sans-serif;padding:12px;border:2px solid var(--line);border-radius:10px;text-align:center;margin:8px 0}
+.pinerr{color:var(--bad);font-weight:700;text-align:center;min-height:20px;margin:2px 0 8px}
+.digon{display:inline-block;background:#DDF3E3;color:#14552A;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:800}
+.sheet select.dur{width:100%;font-size:17px;padding:10px;border:2px solid var(--line);border-radius:10px;margin:4px 0 10px;background:#fff}
 .sb{border:0;border-radius:10px;padding:0 12px;font-weight:800;font-size:16px;background:#fff;color:var(--ink)}.sb.pri{background:var(--acc2);color:#fff}
 .fd .flote{display:flex;flex-direction:column;gap:6px}.fd .flote>div{align-self:flex-start;text-align:left}
 .lab{display:block;font-size:12px;font-weight:800;color:var(--mut);letter-spacing:.04em}
@@ -76,7 +83,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 </head>
 <body>
 <header><h1><img src="logo.png" alt="" class="hlogo">Marcação<small id="hSub">Sem pacote carregado</small></h1><span class="pst" id="pSt">🖨 —</span><button class="hb" id="bMenu" type="button">☰ Menu</button>
-<div id="sbar" class="sbar hide"><input class="scan" id="scan" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="numeric" enterkeyhint="go" placeholder="Etiqueta SAI ou Nº do fardinho"><button class="sb" id="bGo" type="button">OK</button><button class="sb pri" id="bCam" type="button" title="Câmera">📷</button></div></header>
+<div id="sbar" class="sbar hide"><input class="scan" id="scan" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="numeric" enterkeyhint="go" tabindex="-1" aria-label="Leitura do coletor"></div></header>
 <main id="app"></main>
 <input type="file" id="fPac" accept=".txt,.json,text/plain,application/json" hidden>
 <script src="qrcode.js"></script>
@@ -89,7 +96,7 @@ main{padding:12px;max-width:640px;margin:0 auto;padding-bottom:40px}
 // Bluetooth (Web Serial do Chrome) ou pelo app RawBT.
 // Sem dados da empresa no app: logos e nomes vêm dentro do pacote.
 // ======================================================================
-const VER="1.0.43";
+const VER="1.1.0";
 // teclado escondido: o campo recebe o foco como "somente leitura" (o Android não abre o teclado), depois volta a aceitar
 // o texto do leitor e o app pede ao Chrome para esconder o teclado. Tocar no campo abre o teclado para digitar o nº.
 let kbUser=false;const kbHide=()=>{try{if(!kbUser&&navigator.virtualKeyboard)navigator.virtualKeyboard.hide()}catch(e){}};
@@ -337,8 +344,10 @@ async function testePrint(){const d17="0"+"789000000"+"1"+"123456",fd={p:1,n:123
 // ======================================================================
 function findFard(P){if(P.prensa){const ri=IX.f.get(P.prensa*1e7+P.num);return ri===undefined?null:{p:P.prensa,n:P.num,ri}}
   const ps=IX.byN.get(P.num)||[];if(!ps.length)return null;if(ps.length===1)return{p:ps[0],n:P.num,ri:IX.f.get(ps[0]*1e7+P.num)};return{amb:ps}}
-function onRead(raw){if(!PAC){toast("Carregue o pacote primeiro.");return}const P=scanParse(raw);
-  if(!P||P.bad){ui.fd=null;ui.msg={c:"bad",t:"Leitura não reconhecida. Leia a etiqueta SAI (código de barras ou QR) ou digite o nº do fardo."};sBad();render();return}
+function onRead(raw,src){if(!PAC){toast("Carregue o pacote primeiro.");return}const P=scanParse(raw);
+  if(!P||P.bad){ui.fd=null;ui.msg={c:"bad",t:"Leitura não reconhecida. Leia a etiqueta SAI (código de barras ou QR) com o gatilho do coletor."};sBad();render();return}
+  // só o nº do fardo (sem a etiqueta inteira): vale apenas pela opção do Menu, liberada pelo coordenador
+  if(!P.sai&&src!=="dig"){ui.fd=null;ui.msg={c:"bad",t:digLib()?"Para digitar o nº do fardo use ☰ Menu › Digitar nº do fardinho.":"Digitação bloqueada. Leia a etiqueta SAI com o gatilho do coletor. Para digitar o nº, o coordenador libera em ☰ Menu › Digitar nº do fardinho."};sBad();render();return}
   if(P.badCheck){ui.fd=null;ui.msg={c:"bad",t:"Código SAI com dígito verificador errado. Leia de novo."};sBad();render();return}
   if(P.code&&S.pref!==P.code.slice(0,12)){S.pref=P.code.slice(0,12);saveState()}
   const r=findFard(P);
@@ -373,9 +382,10 @@ function render(){
      ${f.dsai?`<p class="hint" style="color:var(--bad);font-weight:700">Atenção: fardo já expedido em ${esc(f.dsai)}.</p>`:""}
      <button class="btn prt big" type="button" id="bPrint" style="margin-top:12px"${!f.lote||ui.busy?" disabled":""}>${ui.busy?"Imprimindo…":"🖨 IMPRIMIR"}</button>
      ${f.lote?`<canvas class="prev" id="cvPrev"></canvas><p class="hint">Prévia da etiqueta 105 × 75 mm.</p>`:""}</div>`
-   :`<div class="card"><div class="msg idle">Leia a etiqueta SAI do fardo…</div><p class="hint">Use o gatilho do coletor, a câmera 📷 ou digite o nº do fardo e toque em OK.</p></div>`}
+   :`<div class="card"><div class="msg idle">Leia a etiqueta SAI do fardo…</div><p class="hint">Use o gatilho do coletor.${digLib()?` <span class="digon">⌨ Digitação liberada ${esc(digAte())}</span> ☰ Menu › Digitar nº do fardinho.`:""}</p>${digLib()?`<button class="btn big" type="button" id="bDig" style="margin-top:10px">⌨ Digitar nº do fardinho</button>`:""}</div>`}
    <div class="card"><h2>Últimas impressões (${fmt(S.hist.length)})</h2><ul class="lst">${S.hist.slice(0,8).map(h=>`<li><b>Lote ${esc(h.lote)}</b><span>P${h.p} · ${g3(h.n)}</span><span class="r muted">${new Date(h.t).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</span></li>`).join("")||`<li class="muted">Nenhuma etiqueta impressa ainda.</li>`}</ul></div>`;
   const bp=$("#bPrint");if(bp)bp.onclick=()=>imprimir(ui.fd);
+  const bd=$("#bDig");if(bd)bd.onclick=openDigitar;
   const cv=$("#cvPrev");if(cv&&f)drawLabel(cv,f);
   focusScan()}
 
@@ -406,17 +416,80 @@ function openDev(first){const n=devNum(S.disp);
     i.oninput=up;i.onkeydown=e=>{if(e.key==="Enter"&&!ok.disabled){e.preventDefault();ok.click()}};
     ok.onclick=()=>{devSet(devFmt(+i.value));closeSheet();render();toast(`Nome do aparelho: ${S.disp}`)};
     setTimeout(()=>{try{i.focus();i.select()}catch(e){}},80)})}
+// ---------- digitar o nº do fardo: fica bloqueado; o coordenador do setor libera com senha (Menu) ----------
+// a senha vale para os apps do coletor deste aparelho (mesmo endereço) e fica guardada só como resumo (hash), nunca o texto
+const PIN_LS="decotton-coord-senha",PIN_TRY="decotton-coord-tent";
+const coordHas=()=>{try{return!!localStorage.getItem(PIN_LS)}catch(e){return false}};
+async function pinHash(p){const t="decotton|coord|"+String(p);try{const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}catch(e){let h=5381;for(const c of t)h=(h*33^c.charCodeAt(0))>>>0;return"x"+h.toString(16)}}
+async function pinOk(p){try{return(await pinHash(p))===localStorage.getItem(PIN_LS)}catch(e){return false}}
+async function pinSet(p){try{localStorage.setItem(PIN_LS,await pinHash(p))}catch(e){}}
+// 5 senhas erradas seguidas: espera 1 minuto
+function pinTrava(){try{const o=JSON.parse(localStorage.getItem(PIN_TRY)||"{}");return o.ate&&o.ate>Date.now()?Math.ceil((o.ate-Date.now())/1000):0}catch(e){return 0}}
+function pinErro(){try{const o=JSON.parse(localStorage.getItem(PIN_TRY)||"{}");o.n=(o.n||0)+1;if(o.n>=5){o.n=0;o.ate=Date.now()+60000}localStorage.setItem(PIN_TRY,JSON.stringify(o));return 5-o.n}catch(e){return 0}}
+function pinZera(){try{localStorage.removeItem(PIN_TRY)}catch(e){}}
+const digLib=()=>{const a=+S.digAte||0;return a===-1||a>Date.now()};
+const digAte=()=>{const a=+S.digAte||0;if(a===-1)return"até bloquear";if(a<=Date.now())return"";const d=new Date(a),hj=new Date();return"até "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+(d.toDateString()===hj.toDateString()?"":" de "+d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}))};
+function digSet(v){S.digAte=v;saveState()}
+// expirou: avisa uma vez e volta a tela
+setInterval(()=>{if(S.digAte&&S.digAte!==-1&&S.digAte<=Date.now()){S.digAte=0;saveState();toast("O tempo liberado para digitar terminou. Digitação bloqueada.",4000);if(!$(".ovl"))render()}},20000);
+const pinIn=(id,ph)=>`<div class="pinrow"><input id="${id}" type="password" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="${ph||"••••"}" aria-label="${ph||"Senha"}"></div>`;
+function pinVal(o,id){return String((o.querySelector("#"+id)||{}).value||"").trim()}
+// 1ª vez: o coordenador cria a senha
+function openCriaSenha(next){
+  showSheet(`<h3>🔑 Criar senha do coordenador</h3><p class="hint" style="margin-top:0">Ainda não há senha neste coletor. O <b>coordenador do setor</b> cria agora uma senha de <b>4 a 12 números</b>. Ela será pedida sempre que for liberar a digitação do nº do fardinho. Não mostre a senha ao colaborador.</p>
+    <label class="hint">Nova senha</label>${pinIn("pn1","Nova senha")}<label class="hint">Repita a senha</label>${pinIn("pn2","Repita a senha")}<p class="pinerr" id="pnE"></p>
+    <button class="btn pri big" type="button" id="pnOk">Criar senha</button><button class="btn big" type="button" data-x style="margin-top:8px">Cancelar</button>`,o=>{
+    const e=o.querySelector("#pnE"),ok=o.querySelector("#pnOk");
+    ok.onclick=async()=>{const a=pinVal(o,"pn1"),b=pinVal(o,"pn2");if(!/^\d{4,12}$/.test(a)){e.textContent="Use de 4 a 12 números.";return}if(a!==b){e.textContent="As duas senhas não são iguais.";return}
+      await pinSet(a);pinZera();toast("Senha do coordenador criada.");if(next)next();else closeSheet()};
+    o.querySelectorAll("input").forEach(i=>i.onkeydown=ev=>{if(ev.key==="Enter"){ev.preventDefault();ok.click()}});setTimeout(()=>{try{o.querySelector("#pn1").focus()}catch(x){}},80)})}
+// liberar: senha + por quanto tempo
+function openLiberar(){if(!coordHas()){openCriaSenha(openLiberar);return}
+  showSheet(`<h3>🔒 Liberar digitação do nº</h3><p class="hint" style="margin-top:0">Só o <b>coordenador do setor</b>. Com a digitação liberada, o colaborador pode digitar o nº do fardinho (sem ler a etiqueta) neste coletor${S.disp?` (<b>${esc(S.disp)}</b>)`:""}.</p>
+    <label class="hint">Senha do coordenador</label>${pinIn("pnL","Senha do coordenador")}
+    <label class="hint">Liberar por</label><select class="dur" id="pnD"><option value="60">1 hora</option><option value="240">4 horas</option><option value="720">12 horas (turno)</option><option value="-1">Até bloquear no Menu</option></select>
+    <p class="pinerr" id="pnE">${pinTrava()?`Muitas tentativas. Aguarde ${pinTrava()} s.`:""}</p>
+    <button class="btn pri big" type="button" id="pnOk">🔓 Liberar</button><button class="btn big" type="button" data-x style="margin-top:8px">Cancelar</button>`,o=>{
+    const e=o.querySelector("#pnE"),ok=o.querySelector("#pnOk"),i=o.querySelector("#pnL");
+    ok.onclick=async()=>{const t=pinTrava();if(t){e.textContent=`Muitas tentativas. Aguarde ${t} s.`;return}const v=pinVal(o,"pnL");if(!v){e.textContent="Digite a senha.";return}
+      if(!(await pinOk(v))){const r=pinErro();i.value="";i.focus();e.textContent=r>0?`Senha errada. Restam ${r} tentativa(s).`:"Senha errada. Aguarde 1 minuto.";if(typeof sBad==="function")sBad();return}
+      pinZera();const m=+o.querySelector("#pnD").value;digSet(m===-1?-1:Date.now()+m*60000);toast(`Digitação liberada ${digAte()}.`,3000);openDigitar()};
+    i.onkeydown=ev=>{if(ev.key==="Enter"){ev.preventDefault();ok.click()}};setTimeout(()=>{try{i.focus()}catch(x){}},80)})}
+// digitar o nº (só com a digitação liberada)
+function openDigitar(){if(!digLib()){openLiberar();return}
+  showSheet(`<h3>⌨ Digitar nº do fardinho</h3><p class="hint" style="margin-top:0"><span class="digon">Liberado ${esc(digAte())}</span> Digite o número do fardo (sem a etiqueta, a de marcação sai sem o código SAI se o app ainda não souber o prefixo).</p>
+    <input class="digin" id="dgN" type="text" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="Nº do fardo" aria-label="Nº do fardinho">
+    <p class="pinerr" id="dgE"></p><button class="btn pri big" type="button" id="dgOk">OK</button><button class="btn big" type="button" data-x style="margin-top:8px">Cancelar</button>`,o=>{
+    const i=o.querySelector("#dgN"),e=o.querySelector("#dgE"),ok=o.querySelector("#dgOk");
+    i.oninput=()=>{const v=i.value.replace(/\D/g,"");if(v!==i.value)i.value=v;e.textContent=""};
+    ok.onclick=()=>{const v=i.value.replace(/\D/g,"");if(!v){e.textContent="Digite o nº do fardo.";return}if(!digLib()){closeSheet();openLiberar();return}closeSheet();onRead(v,"dig")};
+    i.onkeydown=ev=>{if(ev.key==="Enter"){ev.preventDefault();ok.click()}};setTimeout(()=>{try{i.focus()}catch(x){}},80)})}
+// trocar a senha (pede a atual)
+function openTrocaSenha(){
+  showSheet(`<h3>🔑 Trocar senha do coordenador</h3><label class="hint">Senha atual</label>${pinIn("pa","Senha atual")}<label class="hint">Nova senha (4 a 12 números)</label>${pinIn("pn1","Nova senha")}<label class="hint">Repita a nova senha</label>${pinIn("pn2","Repita a nova senha")}
+    <p class="pinerr" id="pnE"></p><button class="btn pri big" type="button" id="pnOk">Salvar nova senha</button><button class="btn big" type="button" data-x style="margin-top:8px">Cancelar</button>`,o=>{
+    const e=o.querySelector("#pnE"),ok=o.querySelector("#pnOk");
+    ok.onclick=async()=>{const t=pinTrava();if(t){e.textContent=`Muitas tentativas. Aguarde ${t} s.`;return}const a=pinVal(o,"pa"),n1=pinVal(o,"pn1"),n2=pinVal(o,"pn2");
+      if(!(await pinOk(a))){const r=pinErro();e.textContent=r>0?`Senha atual errada. Restam ${r} tentativa(s).`:"Senha errada. Aguarde 1 minuto.";return}
+      if(!/^\d{4,12}$/.test(n1)){e.textContent="A nova senha deve ter de 4 a 12 números.";return}if(n1!==n2){e.textContent="As duas novas senhas não são iguais.";return}
+      await pinSet(n1);pinZera();closeSheet();toast("Senha do coordenador trocada.")};
+    o.querySelectorAll("input").forEach(i=>i.onkeydown=ev=>{if(ev.key==="Enter"){ev.preventDefault();ok.click()}});setTimeout(()=>{try{o.querySelector("#pa").focus()}catch(x){}},80)})}
 // item do menu: ícone, título, detalhe e (opcional) contador de pendências
 const mnG=t=>`<div class="mng">${t}</div>`;
 const mnI=(id,ic,t,sub,o)=>{o=o||{};return`<button class="mni${o.dg?" dg":""}" type="button" id="${id}"><span class="ic">${ic}</span><span class="tx"><b>${t}</b>${sub?`<small>${sub}</small>`:""}</span>${o.bd?`<span class="bd">${o.bd}</span>`:""}<span class="ch">›</span></button>`};
 const mnPac=()=>PAC?`Gerado em ${new Date(PAC.gerado).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}`:"Nenhum pacote carregado";
 $("#bMenu").onclick=()=>showSheet(`<h3>Menu</h3><div class="mnu">
   ${mnG("Impressão")}${mnI("mPrn","🖨","Impressora",`Sewoo LK-P400 · ${({serial:"Bluetooth direto",ble:"Bluetooth BLE",rawbt:"App RawBT",sistema:"Impressora do sistema"})[S.cfg.modo]||"configurar"} · ${String(S.cfg.lang||"").toUpperCase()}`)}
+  ${mnG("Leitura")}${mnI("mCam","📷","Ler pela câmera","Lê a etiqueta SAI (código de barras ou QR) pela câmera do aparelho")}${digLib()?mnI("mDig","⌨","Digitar nº do fardinho",`Liberado pelo coordenador ${esc(digAte())}`)+mnI("mDigOff","🔒","Bloquear a digitação agora","Volta a aceitar só a leitura pelo gatilho"):mnI("mDig","🔒","Digitar nº do fardinho","Bloqueado · o coordenador do setor libera com a senha")}${coordHas()?mnI("mPin","🔑","Trocar senha do coordenador","Pede a senha atual"):""}
   ${mnG("Pacote")}${mnI("mPac","📂","Carregar pacote novo",PAC?`${mnPac()} · ${fmt(nFard(PAC))} fardinhos · ${fmt(PAC.lc.length)} lotes`:mnPac())}
   ${mnG("Aparelho")}${mnI("mDisp","✎","Nome deste aparelho",esc(S.disp||"não definido")+(DEV_RE.test(S.disp||"")?"":" · toque para padronizar"))}${mnI("mHist","🗑","Limpar histórico de impressões",`${fmt((S.hist||[]).length)} etiqueta(s) no histórico`,{dg:1})}
   </div><p class="mnv">Marcação · versão ${VER}</p>
   <button class="btn big" type="button" data-x>Fechar</button>`,o=>{
   $("#mPac").onclick=()=>{closeSheet();$("#fPac").click()};$("#mPrn").onclick=openPrinter;
+  $("#mCam").onclick=()=>{if(!PAC){toast("Carregue o pacote primeiro.");return}closeSheet();openCam()};
+  $("#mDig").onclick=()=>{if(!PAC){toast("Carregue o pacote primeiro.");return}if(digLib())openDigitar();else openLiberar()};
+  {const b=$("#mDigOff");if(b)b.onclick=()=>{digSet(0);closeSheet();render();toast("Digitação bloqueada.")}}
+  {const b=$("#mPin");if(b)b.onclick=openTrocaSenha}
   $("#mDisp").onclick=()=>openDev();
   $("#mHist").onclick=()=>{if(confirm("Apagar o histórico de etiquetas impressas deste aparelho?")){S.hist=[];saveState();closeSheet();render()}}});
 function openPrinter(){const c=S.cfg;showSheet(`<h3>🖨 Impressora</h3>
@@ -490,11 +563,8 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 // ---------- leitor (gatilho do coletor, teclado ou câmera) ----------
 function focusScan(){const i=$("#scan");if(ui.kbOff)return;if(i&&PAC&&!$(".ovl")&&!$(".cam")&&document.activeElement!==i){kbUser=false;i.setAttribute("virtualkeyboardpolicy","manual");i.readOnly=true;try{i.focus({preventScroll:true})}catch(e){i.focus()}kbHide();setTimeout(()=>{i.readOnly=false;kbMove(i);kbHide();setTimeout(kbHide,150)},120)}}
 (()=>{const i=$("#scan");let tm=null;const go=()=>{clearTimeout(tm);const v=i.value.trim();i.value="";_pv="";if(v)onRead(v)};
-  $("#bGo").onclick=go;$("#bCam").onclick=openCam;
   i.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key==="Tab"){e.preventDefault();go()}});
   i.addEventListener("focus",()=>{ui.kbOff=false;kbHide()});
-  // tocar no campo: quer digitar o nº do fardo → libera o teclado até sair do campo
-  i.addEventListener("pointerdown",()=>{i.readOnly=false;i.setAttribute("virtualkeyboardpolicy","auto");if(document.activeElement===i){i.blur();setTimeout(()=>{kbUser=true;i.focus();try{navigator.virtualKeyboard&&navigator.virtualKeyboard.show()}catch(e){}},0)}else kbUser=true});
   i.addEventListener("blur",()=>{kbUser=false});
   if(navigator.virtualKeyboard)try{navigator.virtualKeyboard.addEventListener("geometrychange",()=>{if(document.activeElement===i&&navigator.virtualKeyboard.boundingRect.height>0)kbHide()})}catch(e){}
   i.addEventListener("input",()=>{clearTimeout(tm);const v=i.value;if(/\/00\/\d{18}/.test(v)||/\d{20}/.test(v.replace(/\D/g,"")))tm=setTimeout(go,180)});
