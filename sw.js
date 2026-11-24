@@ -1,6 +1,6 @@
 // Service worker: deixa o app de marcação e o leitor de códigos disponíveis sem internet
-const CACHE="marcacao-v46";
-const SHELL=["./","./index.html","./manifest.webmanifest","./icon-192.png","./icon-512.png","./icon-180.png","./logo.png","./qrcode.js"];
+const CACHE="marcacao-v47";
+const SHELL=["./","./index.html","./manifest.webmanifest","./icon-192.png","./icon-512.png","./icon-180.png","./logo.png","./icon-maskable-192.png","./icon-maskable-512.png","./qrcode.js"];
 const EXT=["https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/iife/reader/index.js","https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/reader/zxing_reader.wasm"];
 self.addEventListener("install",e=>{e.waitUntil((async()=>{const c=await caches.open(CACHE);await c.addAll(SHELL);
   for(const u of EXT){try{const r=await fetch(u,{mode:"cors"});if(r.ok)await c.put(u,r)}catch(err){}}self.skipWaiting()})())});
